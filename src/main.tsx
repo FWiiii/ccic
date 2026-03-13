@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 
 import "./assets/template/mu/static/css/sm.css";
+import "./assets/template/mu/static/css/index.css";
 import "./assets/template/mu/static/css/ui-new.css";
 import "./assets/template/mu/static/css/search.css";
 import "./assets/template/mu/static/css/complaints.css";
