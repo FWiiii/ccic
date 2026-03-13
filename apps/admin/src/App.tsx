@@ -1,4 +1,4 @@
-import { ShopOutlined, ApartmentOutlined, PictureOutlined, LinkOutlined, BarcodeOutlined, ProfileOutlined } from "@ant-design/icons";
+ï»¿import { ShopOutlined, ApartmentOutlined, PictureOutlined, LinkOutlined, BarcodeOutlined, ProfileOutlined } from "@ant-design/icons";
 import { Refine } from "@refinedev/core";
 import { ErrorComponent, ThemedLayoutV2, notificationProvider } from "@refinedev/antd";
 import routerBindings, { UnsavedChangesNotifier } from "@refinedev/react-router-v6";
@@ -51,7 +51,7 @@ export default function App() {
           name: "products",
           list: "/products",
           meta: {
-            label: "ÉÌÆ·",
+            label: "å•†å“",
             icon: <ShopOutlined />,
           },
         },
@@ -59,7 +59,7 @@ export default function App() {
           name: "companies",
           list: "/companies",
           meta: {
-            label: "ÆóÒµ",
+            label: "ä¼ä¸š",
             icon: <ApartmentOutlined />,
           },
         },
@@ -67,7 +67,7 @@ export default function App() {
           name: "media",
           list: "/media",
           meta: {
-            label: "ËØ²Ä",
+            label: "ç´ æ",
             icon: <PictureOutlined />,
           },
         },
@@ -75,7 +75,7 @@ export default function App() {
           name: "product-images",
           list: "/product-images",
           meta: {
-            label: "ÉÌÆ·Í¼Æ¬",
+            label: "å•†å“å›¾ç‰‡",
             icon: <LinkOutlined />,
           },
         },
@@ -83,7 +83,7 @@ export default function App() {
           name: "trace-codes",
           list: "/trace-codes",
           meta: {
-            label: "×·ËİÂë",
+            label: "è¿½æº¯ç ",
             icon: <BarcodeOutlined />,
           },
         },
@@ -91,7 +91,7 @@ export default function App() {
           name: "trace-events",
           list: "/trace-events",
           meta: {
-            label: "×·ËİÊÂ¼ş",
+            label: "è¿½æº¯äº‹ä»¶",
             icon: <ProfileOutlined />,
           },
         },

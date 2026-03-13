@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+ï»¿import { useMemo } from "react";
 import { useList } from "@refinedev/core";
 import { CrudResourcePage, type FieldOption } from "../components/CrudResourcePage";
 
@@ -35,27 +35,27 @@ export function ProductsPage() {
 
   return (
     <CrudResourcePage
-      title="ÉÌÆ·¹ÜÀí"
+      title="å•†å“ç®¡ç†"
       resource="products"
       publishResource="products"
       fields={[
-        { key: "name", label: "ÉÌÆ·Ãû³Æ", required: true },
+        { key: "name", label: "å•†å“åç§°", required: true },
         {
           key: "companyId",
-          label: "ËùÊôÆóÒµ",
+          label: "æ‰€å±žä¼ä¸š",
           type: "select",
           required: true,
           options: companyOptions,
           tableRender: (value) => companyMap.get(String(value ?? "")) ?? String(value ?? "-"),
         },
         { key: "sku", label: "SKU" },
-        { key: "brand", label: "Æ·ÅÆ" },
-        { key: "model", label: "ÐÍºÅ" },
-        { key: "summary", label: "ÕªÒª", type: "textarea", hideInTable: true },
-        { key: "productInfoHtml", label: "²úÆ·ÏêÇéHTML", type: "textarea", hideInTable: true },
+        { key: "brand", label: "å“ç‰Œ" },
+        { key: "model", label: "åž‹å·" },
+        { key: "summary", label: "æ‘˜è¦", type: "textarea", hideInTable: true },
+        { key: "productInfoHtml", label: "äº§å“è¯¦æƒ…HTML", type: "textarea", hideInTable: true },
         {
           key: "status",
-          label: "·¢²¼×´Ì¬",
+          label: "å‘å¸ƒçŠ¶æ€",
           type: "select",
           options: [
             { label: "DRAFT", value: "DRAFT" },
@@ -63,7 +63,7 @@ export function ProductsPage() {
             { label: "ARCHIVED", value: "ARCHIVED" },
           ],
         },
-        { key: "updatedAt", label: "¸üÐÂÊ±¼ä", hideInForm: true },
+        { key: "updatedAt", label: "æ›´æ–°æ—¶é—´", hideInForm: true },
       ]}
     />
   );
@@ -78,25 +78,25 @@ export function CompaniesPage() {
 
   return (
     <CrudResourcePage
-      title="ÆóÒµ¹ÜÀí"
+      title="ä¼ä¸šç®¡ç†"
       resource="companies"
       publishResource="companies"
       fields={[
-        { key: "name", label: "ÆóÒµÃû³Æ", required: true },
-        { key: "shortName", label: "¼ò³Æ" },
-        { key: "phone", label: "ÁªÏµµç»°" },
-        { key: "address", label: "µØÖ·" },
-        { key: "descriptionHtml", label: "ÆóÒµ½éÉÜHTML", type: "textarea", hideInTable: true },
+        { key: "name", label: "ä¼ä¸šåç§°", required: true },
+        { key: "shortName", label: "ç®€ç§°" },
+        { key: "phone", label: "è”ç³»ç”µè¯" },
+        { key: "address", label: "åœ°å€" },
+        { key: "descriptionHtml", label: "ä¼ä¸šä»‹ç»HTML", type: "textarea", hideInTable: true },
         {
           key: "logoAssetId",
-          label: "LogoËØ²Ä",
+          label: "Logoç´ æ",
           type: "select",
           options: mediaOptions,
           tableRender: (value) => mediaMap.get(String(value ?? "")) ?? String(value ?? "-"),
         },
         {
           key: "status",
-          label: "·¢²¼×´Ì¬",
+          label: "å‘å¸ƒçŠ¶æ€",
           type: "select",
           options: [
             { label: "DRAFT", value: "DRAFT" },
@@ -104,7 +104,7 @@ export function CompaniesPage() {
             { label: "ARCHIVED", value: "ARCHIVED" },
           ],
         },
-        { key: "updatedAt", label: "¸üÐÂÊ±¼ä", hideInForm: true },
+        { key: "updatedAt", label: "æ›´æ–°æ—¶é—´", hideInForm: true },
       ]}
     />
   );
@@ -113,16 +113,16 @@ export function CompaniesPage() {
 export function MediaPage() {
   return (
     <CrudResourcePage
-      title="ËØ²Ä¿â"
+      title="ç´ æåº“"
       resource="media"
       fields={[
-        { key: "name", label: "Ãû³Æ", required: true },
+        { key: "name", label: "åç§°", required: true },
         { key: "url", label: "URL", required: true },
         { key: "mimeType", label: "MIME" },
-        { key: "sizeBytes", label: "´óÐ¡(byte)", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "width", label: "¿í¶È", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "height", label: "¸ß¶È", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "createdAt", label: "´´½¨Ê±¼ä", hideInForm: true },
+        { key: "sizeBytes", label: "å¤§å°(byte)", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "width", label: "å®½åº¦", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "height", label: "é«˜åº¦", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "createdAt", label: "åˆ›å»ºæ—¶é—´", hideInForm: true },
       ]}
     />
   );
@@ -142,12 +142,12 @@ export function ProductImagesPage() {
 
   return (
     <CrudResourcePage
-      title="ÉÌÆ·Í¼Æ¬°ó¶¨"
+      title="å•†å“å›¾ç‰‡ç»‘å®š"
       resource="product-images"
       fields={[
         {
           key: "productId",
-          label: "ÉÌÆ·",
+          label: "å•†å“",
           type: "select",
           required: true,
           options: productOptions,
@@ -155,7 +155,7 @@ export function ProductImagesPage() {
         },
         {
           key: "assetId",
-          label: "ËØ²Ä",
+          label: "ç´ æ",
           type: "select",
           required: true,
           options: mediaOptions,
@@ -163,7 +163,7 @@ export function ProductImagesPage() {
         },
         {
           key: "scene",
-          label: "³¡¾°",
+          label: "åœºæ™¯",
           type: "select",
           required: true,
           options: [
@@ -173,8 +173,8 @@ export function ProductImagesPage() {
             { label: "DETAIL", value: "DETAIL" },
           ],
         },
-        { key: "sortOrder", label: "ÅÅÐò", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "createdAt", label: "´´½¨Ê±¼ä", hideInForm: true },
+        { key: "sortOrder", label: "æŽ’åº", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "createdAt", label: "åˆ›å»ºæ—¶é—´", hideInForm: true },
       ]}
     />
   );
@@ -189,13 +189,13 @@ export function TraceCodesPage() {
 
   return (
     <CrudResourcePage
-      title="×·ËÝÂë¹ÜÀí"
+      title="è¿½æº¯ç ç®¡ç†"
       resource="trace-codes"
       fields={[
-        { key: "code", label: "×·ËÝÂë", required: true },
+        { key: "code", label: "è¿½æº¯ç ", required: true },
         {
           key: "productId",
-          label: "ÉÌÆ·",
+          label: "å•†å“",
           type: "select",
           required: true,
           options: productOptions,
@@ -203,7 +203,7 @@ export function TraceCodesPage() {
         },
         {
           key: "verifyStatus",
-          label: "ÑéÕæ×´Ì¬",
+          label: "éªŒçœŸçŠ¶æ€",
           type: "select",
           options: [
             { label: "VALID", value: "VALID" },
@@ -212,9 +212,9 @@ export function TraceCodesPage() {
             { label: "REVOKED", value: "REVOKED" },
           ],
         },
-        { key: "verifyCount", label: "²éÑ¯´ÎÊý", type: "number", hideInForm: true },
-        { key: "expiresAt", label: "¹ýÆÚÊ±¼ä(ISO)" },
-        { key: "lastVerifiedAt", label: "×îºó²éÑ¯Ê±¼ä", hideInForm: true },
+        { key: "verifyCount", label: "æŸ¥è¯¢æ¬¡æ•°", type: "number", hideInForm: true },
+        { key: "expiresAt", label: "è¿‡æœŸæ—¶é—´(ISO)" },
+        { key: "lastVerifiedAt", label: "æœ€åŽæŸ¥è¯¢æ—¶é—´", hideInForm: true },
       ]}
     />
   );
@@ -229,12 +229,12 @@ export function TraceEventsPage() {
 
   return (
     <CrudResourcePage
-      title="×·ËÝÊÂ¼þ"
+      title="è¿½æº¯äº‹ä»¶"
       resource="trace-events"
       fields={[
         {
           key: "traceCodeId",
-          label: "×·ËÝÂë",
+          label: "è¿½æº¯ç ",
           type: "select",
           required: true,
           options: traceCodeOptions,
@@ -242,7 +242,7 @@ export function TraceEventsPage() {
         },
         {
           key: "eventType",
-          label: "ÀàÐÍ",
+          label: "ç±»åž‹",
           type: "select",
           options: [
             { label: "SUBMIT", value: "SUBMIT" },
@@ -252,13 +252,12 @@ export function TraceEventsPage() {
             { label: "OTHER", value: "OTHER" },
           ],
         },
-        { key: "title", label: "±êÌâ", required: true },
-        { key: "content", label: "ÄÚÈÝ", type: "textarea", hideInTable: true },
-        { key: "eventTime", label: "ÊÂ¼þÊ±¼ä(ISO)" },
-        { key: "sortOrder", label: "ÅÅÐò", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "createdAt", label: "´´½¨Ê±¼ä", hideInForm: true },
+        { key: "title", label: "æ ‡é¢˜", required: true },
+        { key: "content", label: "å†…å®¹", type: "textarea", hideInTable: true },
+        { key: "eventTime", label: "äº‹ä»¶æ—¶é—´(ISO)" },
+        { key: "sortOrder", label: "æŽ’åº", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "createdAt", label: "åˆ›å»ºæ—¶é—´", hideInForm: true },
       ]}
     />
   );
 }
-

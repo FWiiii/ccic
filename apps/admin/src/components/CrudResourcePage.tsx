@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+ï»¿import { useMemo, useState, type ReactNode } from "react";
 import {
   useCreate,
   useCustomMutation,
@@ -131,14 +131,14 @@ export function CrudResourcePage({
         values: payload,
       });
 
-      message.success("¸üĞÂ³É¹¦");
+      message.success("æ›´æ–°æˆåŠŸ");
     } else {
       await createMutate({
         resource,
         values: payload,
       });
 
-      message.success("´´½¨³É¹¦");
+      message.success("åˆ›å»ºæˆåŠŸ");
     }
 
     closeModal();
@@ -147,8 +147,8 @@ export function CrudResourcePage({
 
   const handleDelete = (record: Record<string, unknown>) => {
     Modal.confirm({
-      title: "È·ÈÏÉ¾³ı",
-      content: "¸Ã²Ù×÷²»¿É³·Ïú£¬ÊÇ·ñ¼ÌĞø£¿",
+      title: "ç¡®è®¤åˆ é™¤",
+      content: "è¯¥æ“ä½œä¸å¯æ’¤é”€ï¼Œæ˜¯å¦ç»§ç»­ï¼Ÿ",
       okButtonProps: { danger: true },
       onOk: async () => {
         await deleteMutate({
@@ -156,7 +156,7 @@ export function CrudResourcePage({
           id: String(record.id),
         });
 
-        message.success("É¾³ı³É¹¦");
+        message.success("åˆ é™¤æˆåŠŸ");
         await tableQueryResult?.refetch();
       },
     });
@@ -173,7 +173,7 @@ export function CrudResourcePage({
       values: { status },
     });
 
-    message.success(status === "PUBLISHED" ? "·¢²¼³É¹¦" : "ÒÑÏÂÏß");
+    message.success(status === "PUBLISHED" ? "å‘å¸ƒæˆåŠŸ" : "å·²ä¸‹çº¿");
     await tableQueryResult?.refetch();
   };
 
@@ -199,26 +199,26 @@ export function CrudResourcePage({
       }));
 
     dataColumns.push({
-      title: "²Ù×÷",
+      title: "æ“ä½œ",
       key: "actions",
       width: 260,
       render: (_: unknown, record: Record<string, unknown>) => (
         <Space wrap>
           <Button size="small" onClick={() => openEdit(record)}>
-            ±à¼­
+            ç¼–è¾‘
           </Button>
           {publishResource ? (
             <>
               <Button size="small" type="primary" onClick={() => void publish(record, "PUBLISHED")}>
-                ·¢²¼
+                å‘å¸ƒ
               </Button>
               <Button size="small" onClick={() => void publish(record, "DRAFT")}>
-                ÏÂÏß
+                ä¸‹çº¿
               </Button>
             </>
           ) : null}
           <Button size="small" danger onClick={() => handleDelete(record)}>
-            É¾³ı
+            åˆ é™¤
           </Button>
         </Space>
       ),
@@ -240,9 +240,9 @@ export function CrudResourcePage({
       <div className="crud-header">
         <h2>{title}</h2>
         <Space>
-          <Button onClick={() => void tableQueryResult?.refetch()}>Ë¢ĞÂ</Button>
+          <Button onClick={() => void tableQueryResult?.refetch()}>åˆ·æ–°</Button>
           <Button type="primary" onClick={openCreate}>
-            ĞÂÔö
+            æ–°å¢
           </Button>
         </Space>
       </div>
@@ -257,7 +257,7 @@ export function CrudResourcePage({
 
       <Modal
         open={isModalOpen}
-        title={editingRecord ? `±à¼­${title}` : `ĞÂÔö${title}`}
+        title={editingRecord ? `ç¼–è¾‘${title}` : `æ–°å¢${title}`}
         onCancel={closeModal}
         onOk={() => form.submit()}
         confirmLoading={Boolean(creating || updating)}
@@ -273,7 +273,7 @@ export function CrudResourcePage({
                 key={field.key}
                 name={field.key}
                 label={field.label}
-                rules={field.required ? [{ required: true, message: `ÇëÊäÈë${field.label}` }] : undefined}
+                rules={field.required ? [{ required: true, message: `è¯·è¾“å…¥${field.label}` }] : undefined}
               >
                 {fieldType === "textarea" ? (
                   <Input.TextArea rows={4} />
@@ -297,6 +297,3 @@ export function CrudResourcePage({
     </div>
   );
 }
-
-
-
