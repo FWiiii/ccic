@@ -1,0 +1,1107 @@
+//鑾峰彇绗竴甯?  var output;
+  var scale = 0.8;
+var commonUrl = '';
+  function initialize(data) {
+  	var video;
+  	output = document.getElementById("output");
+  	video = document.getElementById(data);
+  	video.addEventListener('loadeddata', function(video) {
+  		var n = video.target.src.substr(0, video.target.src.length - 3);
+  		var w = n + 'png';
+  		video.target.poster = w;
+  	});
+  	video.addEventListener('ended', function() {
+  		video.play();
+  		video.pause();
+  	}, false);
+  };
+
+  function initializeBIG(data) {
+  	data[0].addEventListener('ended', function() {
+  		data.play();
+  		data.pause();
+  	}, false);
+  }
+
+
+  //璋冪敤寰俊鍥剧墖娴忚鍣ㄧ殑鏂规硶
+  function imagePreview(curSrc, srcList) {
+  	if (!curSrc || !srcList || srcList.length == 0) {
+  		return;
+  	}
+  	WeixinJSBridge.invoke('imagePreview', {
+  		'current': curSrc,
+  		'urls': srcList
+  	});
+  }
+  //鍥剧墖鐐瑰嚮
+  function showImg(data) {
+  	var aa = [];
+  	var i = 0;
+  	var src = [];
+  	var json = null;
+  	aa = $(data);
+  	for (i = 0; i < aa.length; i++) {
+  		src[i] = aa[i].src; //鎶婃墍鏈夌殑src瀛樺埌鏁扮粍閲? 
+  	}
+  	var srcList = src;
+  	imagePreview(data.src, srcList);
+  }
+
+  var data = new Object();
+  var datacompany = new Object();
+  var companyPk = '';
+  var batchnumber = '';
+  var productPk = '';
+  //椤甸潰鍔犺浇ajax鑾峰彇浜у搧淇℃伅
+  $(document).ready(function() {
+  	function getUrlParam(name) {
+  		var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+  		//鏋勯€犱竴涓惈鏈夌洰鏍囧弬鏁扮殑姝ｅ垯琛ㄨ揪寮忓璞?  		var r = window.location.search.substr(1).match(reg); //鍖归厤鐩爣鍙傛暟
+  		if (r != null) return decodeURI(r[2]);
+  		return null; //杩斿洖鍙傛暟鍊?  	}
+  	var serialNum = getUrlParam('sn');
+  	var batchNum = getUrlParam('batchNum');
+  	var newProductPk = getUrlParam('productPk');
+  	var num = '';
+  	$("#enterccic").on("click", function() {
+  		codeunsetshow.css("display", "none");
+  	})
+  	var params = {};
+  	if (serialNum != '' && serialNum != null && serialNum != undefined) {
+  		$.ajax({
+  			contentType: "application/json",
+  			type: "post",
+  			url: commonUrl + "/trace-mobile/mobile/visit/add",
+  			async: true,
+  			data: JSON.stringify({
+  				sn: serialNum,
+  				// ip:returnCitySN['cip']       
+  			}),
+  			datatype: 'JSON',
+  			success: function(result) {
+  				//not to do
+  			},
+  			error: function() {
+  				//not to do
+  			}
+  		});
+  		params.sn = serialNum
+  		num = serialNum
+
+  	}
+  	if (batchNum != '' && batchNum != null && batchNum != undefined) {
+  		params.batchNum = batchNum
+  		num = batchNum
+  		// $("#complaints").css("display","none");
+  		// $("#infosearch").css("display","none");
+  		// console.log(params)
+  	}
+  	if (newProductPk != '' && newProductPk != null && newProductPk != undefined) {
+  		params.productPk = newProductPk;
+  	}
+
+  	// var serialNum='1009647000515900043076913';
+  	var src = "authen.html?serial_num=" + serialNum;
+  	var complaints = $("#complaints");
+  	var codeunsetshow = $("#codeunsetshow");
+  	$("#infosearch").attr("href", src);
+
+
+
+  })
+
+  //椤甸潰鐨勫瓧娈佃祴鍊肩殑鏂规硶
+  function replace() {
+  	// if(data.productClassifyName!=''){
+  	//    $(".producttype").find(".productType").html(data.productClassifyName);  
+  	// }else{
+  	//    $(".producttype").css("display","none");
+  	// }
+  	if (data.brandName != '') {
+  		$(".brandName").find(".brandname").html(data.brandName);
+  	} else {
+  		$(".brandName").css("display", "none");
+  	}
+  	if (data.produceDate != '') {
+  		if (data.produceDate != '') {
+  			var n = data.produceDate.substring(0, 10);
+  			$(".productdate").find(".productDate").html(n);
+  		}
+
+  	} else {
+  		$(".productdate").css("display", "none");
+  	}
+  	if (data.shelfLife != '') {
+  		$(".period").find(".Period").html(data.shelfLife);
+  	} else {
+  		$(".period").css("display", "none");
+  	}
+  	if (data.companyName != '') {
+  		$(".productcompany").find(".productCompany").html(data.companyName);
+  	} else {
+  		$(".productcompany").css("display", "none");
+  	}
+
+  	if (data.storageEnvironment != '') {
+  		$(".productinsert").find(".productInsert").html(data.storageEnvironment);
+  	} else {
+  		$(".productinsert").css("display", "none");
+  	}
+  	if (data.oriCountry != '') {
+  		$(".country-of-origin").find(".CountryOfOrigin").html(data.oriCountry);
+  	} else {
+  		$(".country-of-origin").css("display", "none");
+  	}
+  	if (data.ingredients != '') {
+  		$(".productpeili").find(".productPeili").html(data.ingredients);
+  	} else {
+  		$(".productpeili").css("display", "none");
+  	}
+  	if (data.implementationStandards != '') {
+  		$(".productsta").find(".productSta").html(data.implementationStandards);
+  	} else {
+  		$(".productsta").css("display", "none");
+  	}
+  	if (data.standardContent != '') {
+  		$(".infor").find(".Infor").html(data.standardContent);
+  	} else {
+  		$(".infor").css("display", "none");
+  	}
+  	if (data.productTechnology != '') {
+  		$(".productart").find(".productArt").html(data.productTechnology);
+  	} else {
+  		$(".productart").css("display", "none");
+  	}
+  	if (data.spec != '') {
+  		$(".new-spec").find(".spec-val").html(data.spec);
+  	} else {
+  		$(".new-spec").css("display", "none");
+  	}
+  	if (data.unit != '') {
+  		$(".new-unit").find(".unit-val").html(data.unit);
+  	} else {
+  		$(".new-unit").css("display", "none");
+  	}
+  	if (data.fieldValueList.length != 0) {
+  		for (var i = 0; i < data.fieldValueList.length; i++) {
+  			var dom;
+  			if (data.fieldValueList[i].type == "imageupload") {
+  				var imgList = data.fieldValueList[i].value.split(',');
+
+  				dom =
+  					"<li class='new-custom-field'>\
+                      <div class='item-content indexItemContentTwo'>\
+                        <div class='liststyle-div2'>\
+                            <div style='color: #333;font-weight: bold;display: block;font-size: 0.6rem;'>" +
+  					data.fieldValueList[i].fieldName +
+  					":</div>\
+                            <div class='imgBox'></div>\
+                        </div>\
+                      </div>\
+                    </li>";
+  				$(".productdata").append(dom);
+  				for (var j = 0; j < imgList.length; j++) {
+  					var imgVal = "<img style='width: 100%;margin-top: 10px;' src='" + commonUrl + imgList[j] + "' />"
+  					$(".imgBox").append(imgVal);
+  				}
+  			} else {
+  				dom =
+  					"<li class='new-custom-field'>\
+                      <div class='item-content indexItemContentTwo'>\
+                        <div class='liststyle-div2'>\
+                            <div class='item-title label indexItemTitle custom-field-name'>" +
+  					data.fieldValueList[i].fieldName +
+  					":</div>\
+                            <div class='item-input indexItemInput'>\
+                              <p class='custom-field-val liststyle'>" +
+  					data.fieldValueList[i].value +
+  					"</p>\
+                            </div>\
+                        </div>\
+                      </div>\
+                    </li>";
+  				$(".productdata").append(dom);
+  			}
+
+  		}
+  	}
+
+  	// $(".companyNameImg").html('浼佷笟鍚嶇О : '+data.companyName);
+  	$(".productname").html(data.brandName + ' ' + data.name);
+  	document.title = data.brandName + ' ' + data.name + '杩芥函淇℃伅';
+  	companyPk = data.companyPk;
+  	batchnumber = data.batchNumber;
+  	var Msglist = [];
+  	if (data != "") {
+  		for (var i = 0; i < data.productImagesUrl.split(',').length; i++) {
+  			var A = data.productImagesUrl.split(',').length;
+  			if (A <= 1) {
+  				Msglist[i] = data.productImagesUrl.split(',')[i];
+  				if (Msglist[i].indexOf("trace-backend") > 0) {
+  					var patch = commonUrl + Msglist[i];
+  				} else {
+  					var patch = commonUrl + "/trace-backend" + Msglist[i];
+  				}
+  				var img = $("<img src='' style='height:100%;display:block;margin:0 auto;' />");
+  				// var img = $("<img src='' style='width:100%;height:auto;' />");
+  				img.attr('src', patch);
+  				var a = $("<a href=''></a>");
+  				a.append(img);
+  				var banWidth = $(".page").css("width");
+  				var screenWidth = banWidth.substring(0, banWidth.length - 2);
+  				var isHeight = (428 / 720.0) * screenWidth;
+  				var div = $("<div id='single-img-set' style='position: relative; left: 0px; width: " + screenWidth +
+  					"px; height: " + isHeight + "px;'></div>");
+  				div.append(a);
+  				$("#slide").append(div);
+  				if (i == 0) {
+  					$(".description1").attr('src', patch);
+  					$(".description1").removeAttr('style');
+  				} else if (i == data.productImagesUrl.split(',').length - 2 && i != 0) {
+  					$(".description2").attr("src", patch);
+  					$(".description2").removeAttr('style');
+  				}
+  			} else {
+  				Msglist[i] = data.productImagesUrl.split(',')[i];
+  				if (Msglist[i].indexOf("trace-backend") > 0) {
+  					var patch = commonUrl + Msglist[i];
+  				} else {
+  					var patch = commonUrl + "/trace-backend" + Msglist[i];
+  				}
+  				var img = $("<img src='' style='height:100%'  />");
+  				// var img = $("<img src='' style='width:100%;height:auto;' />");
+  				img.attr('src', patch);
+  				var a = $("<a href=''></a>");
+  				a.append(img);
+  				var div = $(" <div class='page'></div>");
+  				div.append(a);
+  				$("#slide").append(div);
+  				if (i == 0) {
+  					$(".description1").attr('src', patch);
+  					$(".description1").removeAttr('style');
+  				} else if (i == data.productImagesUrl.split(',').length - 1 && i != 0) {
+  					$(".description2").attr("src", patch);
+  					$(".description2").removeAttr('style');
+  				}
+  			}
+  		};
+  	}
+  	if (data != "") {
+  		if (data.description != '') {
+  			$("#richtext").html(data.description);
+  			$("#richtext").css("display", "block");
+  			//瑙ｅ喅鐢熶骇鐜璺ㄥ煙闂
+  			if ($("#richtext").find("a").length >= 1) {
+  				$("#richtext").find("a").attr("class", "external");
+  			}
+  			if ($("#richtext").find("img").length >= 1) {
+  				// $("#richtext").find("img").css("max-width","100%");
+  				// $("#richtext").find("img").css("height","auto");
+  				$("#richtext").find("img").css({
+  					"max-width": "100%",
+  					"height": "auto",
+  					"display": "block",
+  					"margin": "0 auto"
+  				});
+  				$("#richtext").find("img").attr("onclick", "showImg(this)");
+  			}
+  			if ($("#richtext").find("video").length >= 1) {
+  				// $("#richtext").find("video").css("max-width","100%");
+  				// $("#richtext").find("video").css("height","auto");
+  				// $("#richtext").find("video").css("float","unset");
+  				$("#richtext").find("video").css({
+  					"max-width": "100%",
+  					"height": "auto",
+  					"float": "unset",
+  					"display": "block",
+  					"margin": "0 auto"
+  				});
+  				$("#richtext").find("video").attr("playsinline", "true");
+  				$("#richtext").find("video").attr("webkit-playsinline", "true");
+  				$("#richtext").find("video").attr("preload", "auto");
+  				$("#richtext").find("video").attr("x5-playsinline", "h5");
+  				var rtsrc = $("#richtext").find("video").attr("src");
+  				var rtsrci = rtsrc.substr(0, rtsrc.length - 3)
+  				var Substrin = rtsrci + 'png';
+  				$("#richtext").find("video").attr("poster", Substrin);
+  			}
+  			if ($("#richtext").find("video").length >= 1) {
+  				initializeBIG($("#richtext").find("video"));
+  			}
+
+  		}
+  	}
+  	flagSlide("#slide", 720, 428, true);
+  }
+  //鍔ㄦ€佽幏鍙栧楂?  $(window).resize(function() {
+  	var w = $(".page").css("width");
+  	var screenWidth = w.substring(0, w.length - 2);
+  	var isHeight = (428 / 720.0) * screenWidth;
+  	$("#single-img-set").css({
+  		"width": "" + w + "",
+  		"height": "" + isHeight + "px"
+  	});
+  });
+  // 椤甸潰鍔ㄦ€佸睍寮€鏁堟灉
+  $(".showIcons").live("click", function() {
+  	var butnum = $(this).attr("butnum");
+  	var compk = $(this).attr("compk");
+  	if ($(this).find(".showIcon").siblings(".Icons").text() == "灞曞紑") {
+  		$(this).find(".showIcon").siblings(".Icons").text("鏀惰捣");
+  		$(this).find(".showIcon").css({
+  			"transform": "rotate(180deg)"
+  		});
+  		$(this).find(".showIcon").css({
+  			"padding-top": "6%"
+  		});
+  		$(this).find(".showIcon").css({
+  			"padding-bottom": "9%"
+  		});
+  		$(this).find(".showIcon").parent().parent().siblings(".showWrap").slideDown();
+  		//鍒楄〃鍥剧墖鍔犺浇鍙樿摑
+  		var patch = "/template/mu/static/picture/dot2.jpg";
+  		$(this).find(".showIcon").parent().parent().siblings("img").attr('src', patch);
+  		$(this).find(".showIcon").parent().parent().siblings("img").attr('width', "28px");
+  		$(this).find(".showIcon").parent().parent().siblings("img").attr('height', "28px");
+  		//鐐瑰嚮浼佷笟淇℃伅鑾峰彇浼佷笟淇℃伅
+  		var mythis = $(this).find(".showIcon").parent().parent().parent();
+  		var my = $(this).find(".showIcon");
+  		//鍒ゆ柇鏄惁宸茬粡鍔犺浇
+  		if ($(this).siblings(".showWrap").length == 0) {
+  			$.ajax({
+  				type: "get",
+  				url: commonUrl + "/trace-mobile/mobile/bill/infos",
+  				async: false,
+  				data: {
+  					batchNumber: butnum,
+  					companyPk: compk,
+  					processStepPk: my.attr("pk"),
+  				},
+  				datatype: 'JSON',
+  				success: function(result) {
+  					if (result.code == 200) {
+  						var n = result.result;
+  						if (my.parent().parent().parent().find("label").length == 0) {
+  							for (var i = 0; i < n.length; i++) {
+  								var div = $(
+  									"<div style='border-radius: 0px 0px 10px 10px;border-bottom: 1px solid #bfbfbf;border-left: 1px solid #bfbfbf;border-right: 1px solid #bfbfbf;'></div>"
+  								);
+  								var bold = $("<div style='margin-bottom:10px'></div>");
+  								var bold1 = $("<div></div>");
+  								for (var j = 0; j < n[i].billInfos.length; j++) {
+  									var label = $(
+  										"<label style='display: block;padding-top: 5px;padding-left: 10px;padding-right:10px'></label>");
+  									if (n[i].billInfos[j].metaDataDisplayPk != "imageupload" && n[i].billInfos[j].metaDataDisplayPk !=
+  										"media" && n[i].billInfos[j].metaDataDisplayPk != "fileupload") {
+  										var span = $("<span style='color: #333;font-weight: bold;font-size: 0.6rem;'></span>");
+  										if (n[i].billInfos[j].unit == '' && n[i].billInfos[j].fieldValue != '') {
+  											span.html(n[i].billInfos[j].fieldName + " " + ":" + " ");
+  											var span1 = $("<span style='color: #666;font-size: 0.6rem;'></span>");
+  											span1.html(n[i].billInfos[j].fieldValue);
+  											label.append(span);
+  											label.append(span1);
+  										} else if (n[i].billInfos[j].fieldValue != '') {
+  											span.html(n[i].billInfos[j].fieldName + "(" + n[i].billInfos[j].unit + ")" + " " + ":" + " ");
+  											var span1 = $("<span style='color: #666;font-size: 0.6rem;'></span>");
+  											span1.html(n[i].billInfos[j].fieldValue);
+  											label.append(span);
+  											label.append(span1);
+  										}
+  									} else if (n[i].billInfos[j].metaDataDisplayPk == "fileupload") {
+  										var span = $("<span style='color: #333;font-weight: bold;font-size: 0.6rem;'></span>");
+  										if (n[i].billInfos[j].unit == '' && n[i].billInfos[j].fieldValue != '') {
+  											span.html(n[i].billInfos[j].fieldName + " " + ":" + " ");
+  											label.append(span);
+  											var fileArr = n[i].billInfos[j].attachments;
+  											for (var k = 0; k < fileArr.length; k++) {
+  												var ifileSize;
+  												var iSizeUnit;
+  												if (fileArr[k].size == "" || fileArr[k].size == null) {
+  													ifileSize = 0;
+  													iSizeUnit = "M";
+  												} else if (fileArr[k].size < 102) {
+  													ifileSize = fileArr[k].size;
+  													iSizeUnit = "B";
+  												} else if (fileArr[k].size < 1024 * 100) {
+  													ifileSize = fileArr[k].size / 1024.0;
+  													iSizeUnit = "KB";
+  												} else {
+  													ifileSize = fileArr[k].size / (1024.0 * 1024);
+  													iSizeUnit = "M";
+  												}
+  												var fixedSize = ifileSize.toFixed(2);
+  												var size = fixedSize + iSizeUnit;
+  												var span1 = $("<span style='color: #666;font-size: 0.6rem;display:inherit;line-height:1rem;'>" +
+  													fileArr[k].name + "<a class='download-files' href='javascript:void(0)' size='" + size + "' pk='" +
+  													fileArr[k].pk + "' style='float:right;'>涓嬭浇</a></span>");
+  												label.append(span1);
+  											}
+  										} else if (n[i].billInfos[j].fieldValue != '') {
+  											span.html(n[i].billInfos[j].fieldName + " " + ":" + " ");
+  											label.append(span);
+  											var fileArr = n[i].billInfos[j].attachments;
+  											for (var k = 0; k < fileArr.length; k++) {
+  												var ifileSize;
+  												var iSizeUnit;
+  												if (fileArr[k].size == "" || fileArr[k].size == null) {
+  													ifileSize = 0;
+  													iSizeUnit = "M";
+  												} else if (fileArr[k].size < 102) {
+  													ifileSize = fileArr[k].size;
+  													iSizeUnit = "B";
+  												} else if (fileArr[k].size < 1024) {
+  													ifileSize = fileArr[k].size * 1024;
+  													iSizeUnit = "KB";
+  												} else {
+  													ifileSize = fileArr[k].size * 1024 * 1024;
+  													iSizeUnit = "M";
+  												}
+  												var fixedSize = ifileSize.toFixed(2);
+  												var size = fixedSize + iSizeUnit;
+  												var span1 = $("<span style='color: #666;font-size: 0.6rem;display:inherit;line-height:1rem;'>" +
+  													fileArr[k].name + "<a class='download-files' href='javascript:void(0)' size='" + size + "' pk='" +
+  													fileArr[k].pk + "' style='float:right;'>涓嬭浇</a></span>");
+  												label.append(span1);
+  											}
+  										}
+  									} else if (n[i].billInfos[j].metaDataDisplayPk == "media") {
+  										var span = $("<span style='color: #333;font-weight: bold;display: block;font-size: 0.6rem;'></span>");
+  										if (n[i].billInfos[j].unit == '' && n[i].billInfos[j].fieldValue != '') {
+  											span.html(n[i].billInfos[j].fieldName + " " + ":" + " ");
+  											// var video=$("<video playsinline webkit-playsinline preload x5-playsinline poster='' controls style='width: 100%;margin-top:10px;height:auto' src=''></video>");        
+  											if (n[i].billInfos[j].fieldValue.split(',').length <= 1) {
+  												var video = $(
+  													"<video playsinline webkit-playsinline preload x5-playsinline poster='' controls style='width: 100%;margin-top:10px;height:auto' src=''></video>"
+  												);
+  												if (n[i].billInfos[j].fieldValue.indexOf("trace-backend") > 0) {
+  													video.attr("src", commonUrl + n[i].billInfos[j].fieldValue);
+  													var subStr = n[i].billInfos[j].fieldValue.substr(0, n[i].billInfos[j].fieldValue.length - 3)
+  													var Substrin = subStr + 'png';
+  													video.attr("poster", commonUrl + Substrin);
+  													video.attr("id", i.toString() + j.toString()); //
+  													label.append(span);
+  													label.append(video);
+
+  												} else {
+  													video.attr("src", commonUrl + '/trace-backend' + n[i].billInfos[j].fieldValue);
+  													var subStr = n[i].billInfos[j].fieldValue.substr(0, n[i].billInfos[j].fieldValue.length - 3)
+  													var Substrin = subStr + 'png';
+  													video.attr("poster", commonUrl + Substrin);
+  													video.attr("id", i.toString() + j.toString()); //
+  													label.append(span);
+  													label.append(video);
+  												}
+  											} else {
+  												label.append(span);
+  												for (var c = 0; c < n[i].billInfos[j].fieldValue.split(',').length; c++) {
+  													var video = $(
+  														"<video playsinline webkit-playsinline preload x5-playsinline poster='' controls style='width: 100%;margin-top:10px;height:auto' src=''></video>"
+  													);
+  													if (n[i].billInfos[j].fieldValue.indexOf("trace-backend") > 0) {
+  														var g = n[i].billInfos[j].fieldValue.split(',');
+  														video.attr("src", commonUrl + g[c]);
+  														var subStr = g[c].substr(0, g[c].length - 3)
+  														var Substrin = subStr + 'png';
+  														video.attr("poster", commonUrl + Substrin);
+  														video.attr("id", i.toString() + j.toString());
+  														label.append(video);
+  													} else {
+  														var g = n[i].billInfos[j].fieldValue.split(',');
+  														video.attr("src", commonUrl + '/trace-backend' + g[c]);
+  														var subStr = g[c].substr(0, g[c].length - 3)
+  														var Substrin = subStr + 'png';
+  														video.attr("poster", commonUrl + Substrin);
+  														video.attr("id", i.toString() + j.toString());
+  														label.append(video);
+  													}
+  												}
+  											}
+  										} else if (n[i].billInfos[j].fieldValue != '') {
+  											span.html(n[i].billInfos[j].fieldName + "(" + n[i].billInfos[j].unit + ")" + " " + ":" + " ");
+  											// var video=$("<video playsinline webkit-playsinline preload x5-playsinline poster='' controls style='width:100%;margin-top: 10px;height:auto;object-fit:fill;' src=''></video>");
+  											if (n[i].billInfos[j].fieldValue.split(',').length <= 1) {
+  												var video = $(
+  													"<video playsinline webkit-playsinline preload x5-playsinline poster='' controls style='width:100%;margin-top: 10px;height:auto;object-fit:fill;' src=''></video>"
+  												);
+  												if (n[i].billInfos[j].fieldValue.indexOf("trace-backend") > 0) {
+  													video.attr("src", commonUrl + n[i].billInfos[j].fieldValue);
+  													var subStr = n[i].billInfos[j].fieldValue.substr(0, n[i].billInfos[j].fieldValue.length - 3)
+  													var Substrin = subStr + 'png';
+  													video.attr("poster", commonUrl + Substrin);
+  													video.attr("id", i.toString() + j.toString());
+  													label.append(span);
+  													label.append(video);
+  												} else {
+  													video.attr("src", commonUrl + '/trace-backend' + n[i].billInfos[j].fieldValue);
+  													var subStr = n[i].billInfos[j].fieldValue.substr(0, n[i].billInfos[j].fieldValue.length - 3)
+  													var Substrin = subStr + 'png';
+  													video.attr("poster", commonUrl + Substrin);
+  													video.attr("id", i.toString() + j.toString());
+  													label.append(span);
+  													label.append(video);
+  												}
+  											} else {
+  												label.append(span);
+  												for (var c = 0; c < n[i].billInfos[j].fieldValue.split(',').length; c++) {
+  													var video = $(
+  														"<video playsinline webkit-playsinline preload x5-playsinline poster='' controls style='width:100%;margin-top: 10px;height:auto;object-fit:fill;' src=''></video>"
+  													);
+  													if (n[i].billInfos[j].fieldValue.indexOf("trace-backend") > 0) {
+  														var g = n[i].billInfos[j].fieldValue.split(',');
+  														video.attr("src", commonUrl + g[c]);
+  														var subStr = g[c].substr(0, g[c].length - 3)
+  														var Substrin = subStr + 'png';
+  														video.attr("poster", commonUrl + Substrin);
+  														video.attr("id", i.toString() + j.toString()); //      
+  														label.append(video);
+  													} else {
+  														var g = n[i].billInfos[j].fieldValue.split(',');
+  														video.attr("src", commonUrl + '/trace-backend' + g[c]);
+  														var subStr = g[c].substr(0, g[c].length - 3)
+  														var Substrin = subStr + 'png';
+  														video.attr("poster", commonUrl + Substrin);
+  														video.attr("id", i.toString() + j.toString()); //       
+  														label.append(video);
+  													}
+  												}
+  											}
+  										}
+  									} else {
+  										var span = $("<span style='color: #333;font-weight: bold;display: block;font-size: 0.6rem;'></span>");
+  										if (n[i].billInfos[j].unit == '' && n[i].billInfos[j].fieldValue != '') {
+  											span.html(n[i].billInfos[j].fieldName + " " + ":" + " ");
+  											// var img=$("<img style='width: 100%;margin-top: 10px;' src='' onclick='showImg(this)'>");
+  											if (n[i].billInfos[j].fieldValue.split(',').length <= 1) {
+  												var img = $("<img style='width: 100%;margin-top: 10px;' src='' onclick='showImg(this)'>");
+  												if (n[i].billInfos[j].fieldValue.indexOf("trace-backend") > 0) {
+  													img.attr("src", commonUrl + n[i].billInfos[j].fieldValue);
+  													label.append(span);
+  													label.append(img);
+  												} else {
+  													img.attr("src", commonUrl + '/trace-backend' + n[i].billInfos[j].fieldValue);
+  													label.append(span);
+  													label.append(img);
+  												}
+  											} else {
+  												label.append(span);
+  												for (var c = 0; c < n[i].billInfos[j].fieldValue.split(',').length; c++) {
+  													var img = $("<img style='width: 100%;margin-top: 10px;' src='' onclick='showImg(this)'>");
+  													if (n[i].billInfos[j].fieldValue.indexOf("trace-backend") > 0) {
+  														var g = n[i].billInfos[j].fieldValue.split(',');
+  														img.attr("src", commonUrl + g[c]);
+  														label.append(img);
+  													} else {
+  														var g = n[i].billInfos[j].fieldValue.split(',');
+  														img.attr("src", commonUrl + '/trace-backend' + g[c]);
+  														label.append(img);
+  													}
+  												}
+  											}
+  										} else if (n[i].billInfos[j].fieldValue != '') {
+  											span.html(n[i].billInfos[j].fieldName + "(" + n[i].billInfos[j].unit + ")" + " " + ":" + " ");
+  											// var img=$("<img style='width:100%;margin-top: 10px;' src='' onclick='showImg(this)' >");
+  											if (n[i].billInfos[j].fieldValue.split(',').length <= 1) {
+  												var img = $("<img style='width:100%;margin-top: 10px;' src='' onclick='showImg(this)' >");
+  												if (n[i].billInfos[j].fieldValue.indexOf("trace-backend") > 0) {
+  													img.attr("src", commonUrl + n[i].billInfos[j].fieldValue);
+  													label.append(span);
+  													label.append(img);
+  												} else {
+  													img.attr("src", commonUrl + '/trace-backend' + n[i].billInfos[j].fieldValue);
+  													label.append(span);
+  													label.append(img);
+  												}
+  											} else {
+  												label.append(span);
+  												for (var c = 0; c < n[i].billInfos[j].fieldValue.split(',').length; c++) {
+  													var img = $("<img style='width:100%;margin-top: 10px;' src='' onclick='showImg(this)' >");
+  													if (n[i].billInfos[j].fieldValue.indexOf("trace-backend") > 0) {
+  														var g = n[i].billInfos[j].fieldValue.split(',');
+  														img.attr("src", commonUrl + g[c]);
+  														label.append(img);
+  													} else {
+  														var g = n[i].billInfos[j].fieldValue.split(',');
+  														img.attr("src", commonUrl + '/trace-backend' + g[c]);
+  														label.append(img);
+  													}
+  												}
+  											}
+  										}
+  									}
+  									if (j == 0) {
+  										div.append(bold1);
+  										if (n[i].billInfos[j].fieldValue != '') {
+  											div.append(label);
+  										}
+  										div.append(bold);
+  									} else if (j == n[i].billInfos.length - 1) {
+  										if (n[i].billInfos[j].fieldValue != '') {
+  											div.append(label);
+  										}
+  										div.append(bold);
+  									} else {
+  										if (n[i].billInfos[j].fieldValue != '') {
+  											div.append(label);
+  										}
+  										div.append(bold);
+  									}
+  								}
+
+  								var img = $("<img src='img/1.jpg' style='height: 100%;padding: 5px;padding-left: 13px;float: left;'>");
+  								var span = $(
+  									"<span style='display: block;float: left;color: white;font-weight: bold;line-height: 32px;padding-left: 12px;font-size:0.6rem'></span>"
+  								);
+  								if (n[i].createdTime != '') {
+  									var char = n[i].createdTime.substring(0, 10);
+  								}
+  								span.html(char + " " + "璁板綍");
+  								var div1 = $(
+  									"<div style='height: 32px;border-radius: 10px 10px 0px 0px;background-color:#005bac;border: 1px solid #005bac;'></div>"
+  								);
+  								div1.append(img);
+  								div1.append(span);
+  								var div2 = $(
+  									"<div  style='display: black;margin: 0.1rem;border-radius: 10px;margin-top: 10px;' class='showWrap'></div>"
+  								);
+  								var div3 = $(
+  									"<div  style='display: black;margin: 0.1rem;border-radius: 10px;margin-top: 10px;' class='showWrap'></div>"
+  								);
+  								if (i != n.length - 1) {
+  									div3.append(div1);
+  									div3.append(div);
+  									mythis.append(div3);
+  								} else {
+  									div2.append(div1);
+  									div2.append(div);
+  									mythis.append(div2);
+  								}
+  							}
+  						}
+  					} else {
+  						alert("閿欒淇℃伅锛? + result.message);
+  					}
+  					//鍔犺浇鎴愬姛鏃舵墽琛?  					// $(function(){ 
+  					var n = result.result;
+  					for (var i = 0; i < n.length; i++) {
+  						for (var j = 0; j < n[i].billInfos.length; j++) {
+  							if (n[i].billInfos[j].metaDataDisplayPk == "media" && n[i].billInfos[j].fieldValue != '') {
+  								initialize(i.toString() + j.toString());
+  							}
+  						}
+  					}
+  					// }); 
+  				},
+  				error: function() {
+  					alert("璇锋眰澶辫触");
+  				}
+  			});
+  		}
+  	} else if ($(this).find(".showIcon").siblings(".Icons").text() == "鏀惰捣") {
+  		$(this).find(".showIcon").siblings(".Icons").text("灞曞紑");
+  		$(this).find(".showIcon").css({
+  			"transform": "rotate(0deg)"
+  		});
+  		$(this).find(".showIcon").css({
+  			"padding-top": "12%"
+  		});
+  		$(this).find(".showIcon").css({
+  			"padding-bottom": "8%"
+  		});
+  		$(this).find(".showIcon").parent().parent().siblings(".showWrap").slideUp();
+  		//鍒楄〃鍥剧墖鍔犺浇鍙樼伆
+  		var patch = "/template/mu/static/picture/dot1.jpg";
+  		$(this).find(".showIcon").parent().parent().siblings("img").attr('src', patch);
+  		$(this).find(".showIcon").parent().parent().siblings("img").attr('width', "28px");
+  		$(this).find(".showIcon").parent().parent().siblings("img").attr('height', "28px");
+
+  	}
+  })
+
+  //涓嬭浇闄勪欢鐐瑰嚮浜嬩欢
+  $(".download-files").live("click", function() {
+  	var pk = $(this).attr("pk");
+  	var size = $(this).attr("size");
+  	$("#file-download-btn").attr("pk", pk);
+  	$("#file-download-btn").attr("href", "" + commonUrl + "/trace-backend/file/attachment/download?attachmentPk=" + pk +
+  		"");
+  	$("#file-size").text(size);
+  	if (isWeiXin()) {
+  		window.open(commonUrl + "/trace-backend/file/attachment/download?attachmentPk=" + pk);
+  		$("#open-other-dialog").css("display", "block");
+  	} else {
+  		var broswerType = getBroswer();
+  		if (broswerType.broswer == "Edge" || broswerType.broswer == "IE") {
+  			$("#open-iddownload-dialog").css("display", "block");
+  		} else {
+  			$("#download-files-dialog").css("display", "block");
+  		}
+  	}
+  })
+  //涓嬭浇纭鐐瑰嚮浜嬩欢
+  $("#file-download-btn").on("click", function() {
+  	$("#download-files-dialog").css("display", "none");
+  })
+  //鍙栨秷涓嬭浇浜嬩欢
+  $("#file-cancal-btn").on("click", function() {
+  	$("#download-files-dialog").css("display", "none");
+  })
+  //鍐嶆祻瑙堝櫒涓墦寮€閬斀灞傚彇娑堜簨浠?  $("#open-other-dialog").on("click", function() {
+  	$(this).css("display", "none");
+  })
+  //鍏抽棴閬斀灞?  $("#open-iddownload-dialog").on("click", function() {
+  	$(this).css("display", "none");
+  })
+  //鍒ゆ柇鏄惁涓哄井淇℃祻瑙堝櫒
+  function isWeiXin() {
+  	var reg = new RegExp("MicroMessenger");
+  	var result = reg.test(navigator.userAgent);
+  	return result;
+  }
+  //鍒ゆ柇娴忚鍣ㄧ被鍨?  function getBroswer() {
+  	var sys = {};
+  	var ua = navigator.userAgent.toLowerCase();
+  	var s;
+  	(s = ua.match(/edge\/([\d.]+)/)) ? sys.edge = s[1]:
+  		(s = ua.match(/rv:([\d.]+)\) like gecko/)) ? sys.ie = s[1] :
+  		(s = ua.match(/msie ([\d.]+)/)) ? sys.ie = s[1] :
+  		(s = ua.match(/firefox\/([\d.]+)/)) ? sys.firefox = s[1] :
+  		(s = ua.match(/chrome\/([\d.]+)/)) ? sys.chrome = s[1] :
+  		(s = ua.match(/opera.([\d.]+)/)) ? sys.opera = s[1] :
+  		(s = ua.match(/version\/([\d.]+).*safari/)) ? sys.safari = s[1] : 0;
+
+  	if (sys.edge) return {
+  		broswer: "Edge",
+  		version: sys.edge
+  	};
+  	if (sys.ie) return {
+  		broswer: "IE",
+  		version: sys.ie
+  	};
+  	if (sys.firefox) return {
+  		broswer: "Firefox",
+  		version: sys.firefox
+  	};
+  	if (sys.chrome) return {
+  		broswer: "Chrome",
+  		version: sys.chrome
+  	};
+  	if (sys.opera) return {
+  		broswer: "Opera",
+  		version: sys.opera
+  	};
+  	if (sys.safari) return {
+  		broswer: "Safari",
+  		version: sys.safari
+  	};
+
+  	return {
+  		broswer: "",
+  		version: "0"
+  	};
+  }
+
+  //鐐瑰嚮浼佷笟淇℃伅鑾峰彇浼佷笟淇℃伅
+  $("#companyid").on("click", function() {
+  	if (data.showCompany == '') {
+  		$(".hb-box").css("display", "none");
+  		$.ajax({
+  			type: "get",
+  			url: commonUrl + "/trace-mobile/mobile/company/info",
+  			async: false,
+  			data: {
+  				companyPk: companyPk,
+  			},
+  			datatype: 'JSON',
+  			success: function(result) {
+  				if (result.code == 200) {
+  					datacompany = result.result;
+  					$(".companyname").html(datacompany.companyName);
+  					if (datacompany.companyIntroduction != '') {
+  						$(".businessElectronicFile").html(datacompany.companyIntroduction);
+  						//瑙ｅ喅璺ㄥ煙璁块棶寰俊闂
+  						if ($(".businessElectronicFile").find("a").length >= 1) {
+  							$(".businessElectronicFile").find("a").attr("class", "external");
+  						}
+  						if ($(".businessElectronicFile").find("img").length >= 1) {
+  							// $(".businessElectronicFile").find("img").css("max-width","100%");
+  							// $(".businessElectronicFile").find("img").css("height","auto");
+  							$(".businessElectronicFile").find("img").css({
+  								"max-width": "100%",
+  								"height": "auto",
+  								"display": "block",
+  								"margin": "0 auto"
+  							});
+  							$(".businessElectronicFile").find("img").attr("onclick", "showImg(this)");
+  						}
+  						if ($(".businessElectronicFile").find("video").length >= 1) {
+  							// $(".businessElectronicFile").find("video").css("max-width","100%");
+  							// $(".businessElectronicFile").find("video").css("height","auto");
+  							// $(".businessElectronicFile").find("video").css("float","unset");
+  							$(".businessElectronicFile").find("video").css({
+  								"max-width": "100%",
+  								"height": "auto",
+  								"float": "unset",
+  								"display": "block",
+  								"margin": "0 auto"
+  							});
+  							$(".businessElectronicFile").find("video").attr("playsinline", "true");
+  							$(".businessElectronicFile").find("video").attr("webkit-playsinline", "true");
+  							$(".businessElectronicFile").find("video").attr("preload", "auto");
+  							$(".businessElectronicFile").find("video").attr("x5-playsinline", "h5");
+  							var befsrc = $(".businessElectronicFile").find("video").attr("src");
+  							befsrci = befsrc.substr(0, befsrc.length - 3)
+  							var Substrin = befsrci + 'png';
+  							$(".businessElectronicFile").find("video").attr("poster", Substrin);
+  						}
+  						if ($(".businessElectronicFile").find("video").length >= 1) {
+  							initializeBIG($(".businessElectronicFile").find("video"));
+  						}
+  					}
+  					if (datacompany.logoUrl != "") {
+  						var patch = commonUrl + datacompany.logoUrl;
+  						$("#logo").attr("src", patch);
+  					}
+  					// $("#logo").attr("src", patch); //logo鍔犺浇
+  					//鍥剧墖
+  					var Msglist = [];
+  					if (datacompany != "" && $("#imgcontend").find('img').length == 0) {
+  						for (var i = 0; i < datacompany.certificateElectronicUrl.split(',').length; i++) {
+
+  							if (datacompany.certificateElectronicUrl.split(',')[i].indexOf("trace-backend") > 0) {
+  								Msglist[i] = commonUrl + datacompany.certificateElectronicUrl.split(',')[i];
+  							} else {
+  								Msglist[i] = commonUrl + "/trace-backend" + datacompany.certificateElectronicUrl.split(',')[i];
+  							}
+  							var div = $("<div ></div>");
+  							var img = $("<img style='max-width: 100%' onclick='showImg(this)'/>");
+  							img.attr("src", Msglist[i]);
+  							div.append(img);
+  							$("#imgcontend").append(div);
+  						};
+  					}
+  				} else {
+  					alert("閿欒淇℃伅锛? + result.message);
+  				}
+  			},
+  			error: function() {
+  				alert("璇锋眰澶辫触");
+  			}
+  		});
+  	} else {
+  		$(".hb-box").css("display", "block");
+  		$(".companyname").html(datacompany.name);
+  		datacompany = data.showCompany;
+  		if (datacompany.provinceName == '' && datacompany.cityName == '' && datacompany.districtName == '' && datacompany
+  			.address == '') {
+  			$(".dz-box").css("display", "none");
+  		} else {
+  			$(".dz").html(datacompany.provinceName + datacompany.cityName + datacompany.districtName + datacompany.address);
+  		};
+  		if (datacompany.telephone == '') {
+  			$(".dh-box").css("display", "none");
+  		} else {
+  			$(".dh").html(datacompany.telephone)
+  		};
+  		if (datacompany.description == '') {
+  			$(".js-box").css("display", "none");
+  		} else {
+  			$(".js").html(datacompany.description)
+  		};
+  		var Msglist = [];
+  		if (datacompany.pictures != "") {
+  			if ($(".xctp").find('img').length == 0) {
+  				for (var i = 0; i < datacompany.pictures.split(',').length; i++) {
+
+  					if (datacompany.pictures.split(',')[i].indexOf("trace-backend") > 0) {
+  						Msglist[i] = commonUrl + datacompany.pictures.split(',')[i];
+  					} else {
+  						Msglist[i] = commonUrl + "/trace-backend" + datacompany.pictures.split(',')[i];
+  					}
+  					var div = $("<div ></div>");
+  					var img = $("<img style='width: 100%' onclick='showImg(this)'/>");
+  					img.attr("src", Msglist[i]);
+  					div.append(img);
+  					$(".xctp").append(div);
+  				};
+  			}
+  		} else {
+  			$(".xc-box").css("display", "none");
+  		}
+  		if (datacompany.detailInfo != '') {
+  			$(".businessElectronicFile").html(datacompany.detailInfo);
+  			//瑙ｅ喅璺ㄥ煙璁块棶寰俊闂
+  			if ($(".businessElectronicFile").find("a").length >= 1) {
+  				$(".businessElectronicFile").find("a").attr("class", "external");
+  			}
+  			if ($(".businessElectronicFile").find("img").length >= 1) {
+  				// $(".businessElectronicFile").find("img").css("max-width","100%");
+  				// $(".businessElectronicFile").find("img").css("height","auto");
+  				$(".businessElectronicFile").find("img").css({
+  					"max-width": "100%",
+  					"height": "auto",
+  					"display": "block",
+  					"margin": "0 auto"
+  				});
+  				$(".businessElectronicFile").find("img").attr("onclick", "showImg(this)");
+  			}
+  			if ($(".businessElectronicFile").find("video").length >= 1) {
+  				// $(".businessElectronicFile").find("video").css("max-width","100%");
+  				// $(".businessElectronicFile").find("video").css("height","auto");
+  				// $(".businessElectronicFile").find("video").css("float","unset");
+  				$(".businessElectronicFile").find("video").css({
+  					"max-width": "100%",
+  					"height": "auto",
+  					"float": "unset",
+  					"display": "block",
+  					"margin": "0 auto"
+  				});
+  				$(".businessElectronicFile").find("video").attr("playsinline", "true");
+  				$(".businessElectronicFile").find("video").attr("webkit-playsinline", "true");
+  				$(".businessElectronicFile").find("video").attr("preload", "auto");
+  				$(".businessElectronicFile").find("video").attr("x5-playsinline", "h5");
+  				var befsrc = $(".businessElectronicFile").find("video").attr("src");
+  				befsrci = befsrc.substr(0, befsrc.length - 3)
+  				var Substrin = befsrci + 'png';
+  				$(".businessElectronicFile").find("video").attr("poster", Substrin);
+  			}
+  			if ($(".businessElectronicFile").find("video").length >= 1) {
+  				initializeBIG($(".businessElectronicFile").find("video"));
+  			}
+  		}
+
+  		var zzlist = [];
+  		if (datacompany.certificatePics != "" && $("#imgcontend").find('img').length == 0) {
+  			for (var i = 0; i < datacompany.certificatePics.split(',').length; i++) {
+
+  				if (datacompany.certificatePics.split(',')[i].indexOf("trace-backend") > 0) {
+  					Msglist[i] = commonUrl + datacompany.certificatePics.split(',')[i];
+  				} else {
+  					Msglist[i] = commonUrl + "/trace-backend" + datacompany.certificatePics.split(',')[i];
+  				}
+  				var div = $("<div ></div>");
+  				var img = $("<img style='max-width: 100%' onclick='showImg(this)'/>");
+  				img.attr("src", Msglist[i]);
+  				div.append(img);
+  				$("#imgcontend").append(div);
+  			};
+  		}
+  	}
+  })
+
+
+  //鐐瑰嚮婧簮淇℃伅鑾峰彇浼佷笟淇℃伅
+  $("#origin").on("click", function() {
+  	console.log(companyPk);
+  	if ($("#ullist").find("li").length == 0) {
+  		$.ajax({
+  			type: "get",
+  			url: commonUrl + "/trace-mobile/mobile/processStep/list",
+  			async: false,
+  			data: {
+  				batchNumber: batchnumber,
+  				companyPk: companyPk,
+  			},
+  			datatype: 'JSON',
+  			success: function(result) {
+  				if (result.code == 200) {
+  					var n = result.result;
+  					for (var i = 0; i < n.length; i++) {
+  						if (n.length >= 2 && i == 0) {
+  							var span = $(
+  								"<span class='Icons' style='color: #666;font-weight:bold;padding-right: 8px;font-size: 0.7rem;'>灞曞紑</span>"
+  							);
+  							var img = $(
+  								"<img class='showIcon'  style='display: block;float: right;padding-top: 12%;padding-bottom: 8%;' src='img/data3.jpg'>"
+  							);
+  							img.attr("pk", n[i].processStepPk);
+  							var div = $("<div style='float: right;' ></div>");
+  							div.append(span);
+  							div.append(img);
+  							var span1 = $("<span style='font-weight: bold;color: #000;font-size: 0.7rem'></span>");
+  							span1.html(result.result[i].name);
+  							var div1 = $(
+  								"<div class='showIcons' style='padding: 14px;padding-left: 8px;padding-top: 0px;margin-top: 14px;'></div>"
+  							);
+  							div1.attr("butnum", result.result[i].batchNumber);
+  							div1.attr("compk", result.result[i].companyPk);
+  							div1.append(span1);
+  							div1.append(div);
+  							var div2 = $(" <div style='float: left;'></div>");
+  							var img1 = $(" <img src='/template/mu/static/picture/dot1.jpg' style='position: absolute;left: 15px; width: 21px;height: 21px;'>");
+
+  							var div3 = $("<div style='border-bottom: 1px solid #bfbfbf;height: 1px'></div>");
+  							var li = $(" <li style='width: 95%'></li>");
+  							li.append(img1);
+  							li.append(div2);
+  							li.append(div1);
+  							li.append(div3);
+  							$("#ullist").append(li);
+  						} else if (i != n.length - 1) {
+  							var span = $(
+  								"<span class='Icons' style='color: #666;font-weight:bold;padding-right: 8px;font-size: 0.7rem;'>灞曞紑</span>"
+  							);
+  							var img = $(
+  								"<img class='showIcon' style='display: block;float: right;padding-top: 12%;padding-bottom: 8%;' src='img/data3.jpg'>"
+  							);
+  							img.attr("pk", n[i].processStepPk);
+  							var div = $("<div style='float: right;'></div>");
+  							div.append(span);
+  							div.append(img);
+  							var span1 = $("<span style='font-weight: bold;color: #000;font-size: 0.7rem'></span>");
+  							span1.html(result.result[i].name);
+  							var div1 = $("<div  class='showIcons' style='padding: 14px;padding-left: 8px;'></div>");
+  							div1.attr("butnum", result.result[i].batchNumber);
+  							div1.attr("compk", result.result[i].companyPk);
+  							div1.append(span1);
+  							div1.append(div);
+  							var img1 = $(
+  								" <img src='/template/mu/static/picture/dot1.jpg' style='position: absolute;left: 15px;margin-top: 14px;width: 21px;height: 21px;'>"
+  							);
+  							var div3 = $("<div style='border-bottom: 1px solid #bfbfbf;height: 1px'></div>");
+  							var li = $(" <li style='width: 95%'></li>");
+  							li.append(img1);
+  							li.append(div1);
+  							li.append(div3);
+  							$("#ullist").append(li);
+  						} else {
+  							var span = $(
+  								"<span class='Icons' style='color: #666;font-weight:bold;padding-right: 8px;font-size: 0.7rem;'>灞曞紑</span>"
+  							);
+  							var img = $(
+  								"<img class='showIcon' style='display: block;float: right;padding-top: 12%;padding-bottom: 8%;' src='img/data3.jpg'>"
+  							);
+  							img.attr("pk", n[i].processStepPk);
+  							var div = $("<div style='float: right;'></div>");
+  							div.append(span);
+  							div.append(img);
+  							var span1 = $("<span style='font-weight: bold;color: #000;font-size: 0.7rem'></span>");
+  							span1.html(result.result[i].name);
+  							var div1 = $("<div  class='showIcons' style='padding: 14px;padding-left: 8px;'></div>");
+  							div1.attr("butnum", result.result[i].batchNumber);
+  							div1.attr("compk", result.result[i].companyPk);
+  							div1.append(span1);
+  							div1.append(div);
+  							var img1 = $(
+  								" <img src='/template/mu/static/picture/dot1.jpg' style='position: absolute;left: 15px;margin-top: 14px;width: 21px;height: 21px;'>"
+  							);
+  							var div3 = $(
+  								"<div style='border-bottom: 1px solid #bfbfbf;height: 1px;position: absolute;width: 85%;'></div>");
+  							var li = $(" <li style='width: 95%'></li>");
+  							li.append(img1);
+  							li.append(div1);
+  							li.append(div3);
+  							$("#ullist").append(li);
+  						}
+
+  					}
+  				} else {
+  					alert("閿欒淇℃伅锛? + result.message);
+  				}
+  			},
+  			error: function() {
+  				alert("璇锋眰澶辫触");
+  			}
+  		});
+  	}
+  })

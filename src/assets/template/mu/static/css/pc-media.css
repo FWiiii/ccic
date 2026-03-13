@@ -1,0 +1,17 @@
+@media screen and (min-width: 640px) {
+    .page {
+        max-width: 640px;
+        margin: 0 auto;
+    }
+    .tit{
+        background-repeat: no-repeat;
+        background-position: 0px;
+    }
+    .buttons-fixed{
+    	max-width: 640px;
+    }
+    .tit-dzxsy{
+        background-repeat: no-repeat;
+        background-position: 0px;
+    }
+}

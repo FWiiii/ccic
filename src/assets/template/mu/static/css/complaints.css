@@ -1,0 +1,78 @@
+.complaints-h1{
+   background-color: #005bac;color: #fff;font-weight: bold;line-height: 3rem;font-size: 0.9rem
+}
+.complaints-span{
+	display: block;float: right;line-height: 3rem;color: white;margin-left: 7px;font-size: 0.75rem
+}
+.complaints-a{
+	font-weight: bold;color: white;margin-left: 10px;float: left;
+}
+.complaints-span2{
+	display: block;text-align: center;width: 90%;margin: auto;margin-top: 30px;height: 57px;line-height: 57px;border-radius: 5px;background-color: #003d92;color: white;margin-bottom: 30px;font-size: 0.75rem;cursor:pointer
+}
+.complaintShowDiv{
+	width: 100%;height: 100%;background-color:rgba(0,0,0,0.3);position: absolute;z-index: 999;top: 0;left: 0;display: none;
+}
+.complaintShowDivTwo{
+	width: 84%;height: 100px;position: fixed;top: 39%;margin-left: 8%;margin-right: 8%;text-align: center;background-color: white;border-radius: 10px;color: #343434;z-index: 1000
+}
+.complaintShowDivThree{
+	height: 50px;border-bottom: 1px solid #CCCCCC;
+}
+.complaintShowDivThree span{
+	line-height: 50px;font-size: larger;
+}
+.complaintShowDivFour{
+	height: 50px;
+}
+.complaintShowDivFive{
+	width: 100%;float: right;
+}
+.complaintShowDivFive span{
+	line-height: 50px;font-size: larger;color:#3385ff
+}
+.complaintPageCurrent{
+	background-color: white;
+}
+.complaintHeader{
+	height: 3rem;
+}
+.complaintHeaderIn{
+	height: 3rem !important;
+}
+.complaintA{
+	line-height: 3rem !important;
+}
+.complaintContent{
+	 top: 3rem !important;
+}
+.complaintItemContent{
+	padding-left: 0px !important;
+	border-bottom: 1px solid #BFBFBF;
+	height: 2.15rem;
+	line-height: 2.15rem;
+}
+.complaintItemInput{
+	font-size: 0.75rem !important;
+}
+.complaintItemInfor{
+	height: 25px
+}
+.complaintItemInfor span{
+	display: none;text-align: center
+}
+.complaintListBlock{
+	margin-top: 10px;height: 69%;
+}
+.placeholder{
+	position:absolute;
+	top:0px;
+	height:2.15rem;
+	line-height:2.15rem;
+}
+.complaint-height-auto{
+	height: auto;
+}
+#co-name,#co-phonenum,#co-email,#co-content{
+	padding-left: 1rem;
+}
