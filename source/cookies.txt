@@ -1,6 +1,0 @@
-# HTTrack Website Copier Cookie File
-# This file format is compatible with Netscape cookies
-www.cciccccloud.com	TRUE	/	FALSE	1999999999	lg	cn
-www.cciccccloud.com	TRUE	/	FALSE	1999999999	visited_before	1
-www.cciccccloud.com	TRUE	/	FALSE	1999999999	PbootSystem	rvokl31av790tds8d2u893e1k7
-
