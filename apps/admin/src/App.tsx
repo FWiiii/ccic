@@ -1,4 +1,12 @@
-﻿import { ShopOutlined, ApartmentOutlined, PictureOutlined, LinkOutlined, BarcodeOutlined, ProfileOutlined } from "@ant-design/icons";
+import {
+  ApartmentOutlined,
+  BarcodeOutlined,
+  FileSearchOutlined,
+  LinkOutlined,
+  PictureOutlined,
+  ProfileOutlined,
+  ShopOutlined,
+} from "@ant-design/icons";
 import { Refine } from "@refinedev/core";
 import { ErrorComponent, ThemedLayoutV2, notificationProvider } from "@refinedev/antd";
 import routerBindings, { UnsavedChangesNotifier } from "@refinedev/react-router-v6";
@@ -11,6 +19,7 @@ import {
   ProductsPage,
   TraceCodesPage,
   TraceEventsPage,
+  TracePagesPage,
 } from "./resources/pages";
 import { authProvider } from "./providers/auth-provider";
 import { dataProvider, TOKEN_STORAGE_KEY } from "./providers/data-provider";
@@ -51,7 +60,7 @@ export default function App() {
           name: "products",
           list: "/products",
           meta: {
-            label: "商品",
+            label: "\u5546\u54c1",
             icon: <ShopOutlined />,
           },
         },
@@ -59,7 +68,7 @@ export default function App() {
           name: "companies",
           list: "/companies",
           meta: {
-            label: "企业",
+            label: "\u4f01\u4e1a",
             icon: <ApartmentOutlined />,
           },
         },
@@ -67,7 +76,7 @@ export default function App() {
           name: "media",
           list: "/media",
           meta: {
-            label: "素材",
+            label: "\u7d20\u6750",
             icon: <PictureOutlined />,
           },
         },
@@ -75,15 +84,23 @@ export default function App() {
           name: "product-images",
           list: "/product-images",
           meta: {
-            label: "商品图片",
+            label: "\u5546\u54c1\u56fe\u7247",
             icon: <LinkOutlined />,
+          },
+        },
+        {
+          name: "trace-pages",
+          list: "/trace-pages",
+          meta: {
+            label: "SN\u8ffd\u6eaf\u9875",
+            icon: <FileSearchOutlined />,
           },
         },
         {
           name: "trace-codes",
           list: "/trace-codes",
           meta: {
-            label: "追溯码",
+            label: "\u8ffd\u6eaf\u7801",
             icon: <BarcodeOutlined />,
           },
         },
@@ -91,7 +108,7 @@ export default function App() {
           name: "trace-events",
           list: "/trace-events",
           meta: {
-            label: "追溯事件",
+            label: "\u8ffd\u6eaf\u4e8b\u4ef6",
             icon: <ProfileOutlined />,
           },
         },
@@ -108,6 +125,7 @@ export default function App() {
           <Route path="/companies" element={<CompaniesPage />} />
           <Route path="/media" element={<MediaPage />} />
           <Route path="/product-images" element={<ProductImagesPage />} />
+          <Route path="/trace-pages" element={<TracePagesPage />} />
           <Route path="/trace-codes" element={<TraceCodesPage />} />
           <Route path="/trace-events" element={<TraceEventsPage />} />
         </Route>

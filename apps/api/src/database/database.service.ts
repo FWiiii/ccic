@@ -1,4 +1,4 @@
-﻿import { randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { Injectable } from "@nestjs/common";
@@ -14,6 +14,7 @@ const EMPTY_DB: Database = {
   productImages: [],
   inspectionReports: [],
   traceCodes: [],
+  tracePages: [],
   traceEvents: [],
   traceVerifyLogs: [],
   auditLogs: [],
@@ -34,7 +35,23 @@ export class DatabaseService {
   async readDb(): Promise<Database> {
     await this.ensureDataFile();
     const raw = await fs.readFile(dataPath, "utf8");
-    return JSON.parse(raw) as Database;
+    const parsed = JSON.parse(raw) as Partial<Database>;
+
+    return {
+      ...EMPTY_DB,
+      ...parsed,
+      adminUsers: parsed.adminUsers ?? [],
+      mediaAssets: parsed.mediaAssets ?? [],
+      companies: parsed.companies ?? [],
+      products: parsed.products ?? [],
+      productImages: parsed.productImages ?? [],
+      inspectionReports: parsed.inspectionReports ?? [],
+      traceCodes: parsed.traceCodes ?? [],
+      tracePages: parsed.tracePages ?? [],
+      traceEvents: parsed.traceEvents ?? [],
+      traceVerifyLogs: parsed.traceVerifyLogs ?? [],
+      auditLogs: parsed.auditLogs ?? [],
+    };
   }
 
   async writeDb(db: Database): Promise<void> {

@@ -49,7 +49,7 @@
       "name": "中国检验认证集团奢侈品鉴定中心",
       "shortName": "中检奢侈品",
       "phone": "010-58619556",
-      "address": "北京市朝阳区示例路 100 号",
+      "address": "北京市朝阳区示例路100号",
       "descriptionHtml": "<p>这是企业介绍示例文本，可在后台修改并发布。</p>",
       "logoAssetId": "media-company-1",
       "status": "PUBLISHED",
@@ -103,12 +103,12 @@
     {
       "id": "report-1",
       "productId": "product-1",
-      "consignorName": "港城国际",
+      "consignorName": "演示委托单位",
       "inspectionDate": "2026-01-30",
       "conclusion": "送检样品符合品牌方商品外观工艺特征。",
       "notes": [
         "检验结果仅对送检样品负责。",
-        "对结果有异议请在 15 日内提出。"
+        "对结果有异议请在15日内提出。"
       ],
       "rawHtml": "<p>这里是原始报告 HTML（可选）。</p>",
       "createdAt": "2026-03-13T00:00:00.000Z",
@@ -121,10 +121,21 @@
       "code": "CCIC-DEMO-0001",
       "productId": "product-1",
       "verifyStatus": "VALID",
-      "verifyCount": 11,
+      "verifyCount": 0,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "tracePages": [
+    {
+      "id": "trace-page-1",
+      "sn": "SN-DEMO-0001",
+      "indexBannerAssetIdsCsv": "media-hero-1,media-carousel-1",
+      "consignorName": "示例委托单位",
+      "inspectionDate": "2026-01-30",
+      "traceContent": "这是按 SN 查询的追溯信息示例内容。",
+      "status": "PUBLISHED",
       "createdAt": "2026-03-13T00:00:00.000Z",
-      "lastVerifiedAt": "2026-03-13T08:45:21.950Z",
-      "firstVerifiedAt": "2026-03-13T05:01:50.354Z"
+      "updatedAt": "2026-03-13T00:00:00.000Z"
     }
   ],
   "traceEvents": [
@@ -149,73 +160,6 @@
       "createdAt": "2026-03-13T00:00:00.000Z"
     }
   ],
-  "traceVerifyLogs": [
-    {
-      "id": "91bda4c3-34b2-44d2-908d-2381ca0187e6",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T08:45:21.950Z",
-      "isValid": true
-    },
-    {
-      "id": "2b497de5-8503-467b-bcf8-60f993ddb98f",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T08:45:21.934Z",
-      "isValid": true
-    },
-    {
-      "id": "7d73e80d-de08-4939-b50b-3ac75bc44c60",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T08:44:26.668Z",
-      "isValid": true
-    },
-    {
-      "id": "e9f7182c-688b-4a9c-aa10-df47ff56f91c",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T08:44:26.655Z",
-      "isValid": true
-    },
-    {
-      "id": "b2fe3288-4b3c-41f3-b27d-52d1dc3f5ae9",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T08:41:51.452Z",
-      "isValid": true
-    },
-    {
-      "id": "c47e052f-75d3-4bc5-9a6e-11a7735a7330",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T08:41:51.438Z",
-      "isValid": true
-    },
-    {
-      "id": "15e67275-92ad-4b7b-a58b-ef723870275d",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T08:41:43.427Z",
-      "isValid": true
-    },
-    {
-      "id": "be5b8555-a920-44c7-989f-e9808f5541b3",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T08:41:43.415Z",
-      "isValid": true
-    },
-    {
-      "id": "97bfd04e-69f2-4d4e-b122-38e01c90c138",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T07:43:43.254Z",
-      "isValid": true
-    },
-    {
-      "id": "c3b835e8-b689-4da3-9c5b-9729294ad393",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T07:39:58.592Z",
-      "isValid": true
-    },
-    {
-      "id": "5709a155-bfa2-4547-83e6-954d4c00cdc8",
-      "traceCodeId": "trace-1",
-      "verifyAt": "2026-03-13T05:01:50.354Z",
-      "isValid": true
-    }
-  ],
+  "traceVerifyLogs": [],
   "auditLogs": []
 }

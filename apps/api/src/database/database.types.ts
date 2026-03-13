@@ -1,4 +1,4 @@
-﻿export type PublishStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export type PublishStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 export type VerifyStatus = "VALID" | "INVALID" | "EXPIRED" | "REVOKED";
 
 export interface MediaAsset {
@@ -88,6 +88,17 @@ export interface TraceCode {
   createdAt: string;
 }
 
+export interface TracePage {
+  id: string;
+  sn: string;
+  indexBannerAssetIdsCsv: string;
+  consignorName?: string;
+  inspectionDate?: string;
+  traceContent?: string;
+  status: PublishStatus;
+  createdAt: string;
+  updatedAt: string;
+}
 export interface TracePageAggregate {
   traceCode: TraceCode;
   product: Product;
@@ -149,7 +160,9 @@ export interface Database {
   productImages: ProductImage[];
   inspectionReports: InspectionReport[];
   traceCodes: TraceCode[];
+  tracePages: TracePage[];
   traceEvents: TraceEvent[];
   traceVerifyLogs: TraceVerifyLog[];
   auditLogs: AuditLog[];
 }
+

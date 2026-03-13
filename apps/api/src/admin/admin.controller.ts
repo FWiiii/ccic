@@ -22,6 +22,7 @@ import type {
   PublishStatus,
   TraceCode,
   TraceEvent,
+  TracePage,
   VerifyStatus,
 } from "../database/database.types";
 
@@ -37,10 +38,16 @@ const isTraceEventType = (value: unknown): value is TraceEvent["eventType"] =>
 const isProductImageScene = (value: unknown): value is ProductImage["scene"] =>
   ["HERO", "CAROUSEL", "COMPANY_DETAIL", "DETAIL"].includes(String(value));
 
+
 const toNumber = (value: unknown, fallback = 0) => {
   const num = typeof value === "number" ? value : Number(value);
   return Number.isFinite(num) ? num : fallback;
 };
+const parseAssetIdsCsv = (value: unknown) =>
+  String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 @UseGuards(AdminAuthGuard)
 @Controller("api/admin")
@@ -59,6 +66,7 @@ export class AdminController {
         productImages: db.productImages,
         inspectionReports: db.inspectionReports,
         traceCodes: db.traceCodes,
+        tracePages: db.tracePages,
         traceEvents: db.traceEvents,
       },
     };
@@ -151,7 +159,11 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteMedia(@Param("id") id: string) {
     const result = await this.databaseService.mutateDb((db) => {
-      if (db.productImages.some((item) => item.assetId === id) || db.companies.some((item) => item.logoAssetId === id)) {
+      if (
+        db.productImages.some((item) => item.assetId === id) ||
+        db.companies.some((item) => item.logoAssetId === id) ||
+        db.tracePages.some((item) => parseAssetIdsCsv(item.indexBannerAssetIdsCsv).includes(id))
+      ) {
         return "IN_USE" as const;
       }
 
@@ -588,6 +600,251 @@ export class AdminController {
     }
   }
 
+  @Get("trace-pages")
+  async listTracePages() {
+    const db = await this.databaseService.readDb();
+    return { data: db.tracePages };
+  }
+
+  @Post("trace-pages")
+  async createTracePage(@Body() body: Record<string, unknown>) {
+    const sn = String(body?.sn ?? "").trim();
+
+    if (!sn) {
+      throw new HttpException({ message: "sn is required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const indexBannerAssetIdsCsv = String(body?.indexBannerAssetIdsCsv ?? "").trim();
+    const now = this.databaseService.nowIso();
+
+    const result = await this.databaseService.mutateDb((db) => {
+      if (db.tracePages.some((item) => item.sn === sn)) {
+        return { error: "SN_EXISTS" as const };
+      }
+
+      const assetIds = parseAssetIdsCsv(indexBannerAssetIdsCsv);
+      if (assetIds.some((assetId) => !db.mediaAssets.some((asset) => asset.id === assetId))) {
+        return { error: "ASSET_NOT_FOUND" as const };
+      }
+
+      const status = body?.status;
+      if (status !== undefined && !isPublishStatus(status)) {
+        return { error: "INVALID_STATUS" as const };
+      }
+
+      const item: TracePage = {
+        id: this.databaseService.newId(),
+        sn,
+        indexBannerAssetIdsCsv,
+        consignorName: body?.consignorName ? String(body.consignorName).trim() : undefined,
+        inspectionDate: body?.inspectionDate ? String(body.inspectionDate).trim() : undefined,
+        traceContent: body?.traceContent ? String(body.traceContent) : undefined,
+        status: isPublishStatus(status) ? status : "DRAFT",
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      db.tracePages.unshift(item);
+      return { data: item };
+    });
+
+    if ("error" in result) {
+      if (result.error === "SN_EXISTS") {
+        throw new HttpException({ message: "sn already exists" }, HttpStatus.CONFLICT);
+      }
+
+      throw new HttpException(
+        { message: result.error === "ASSET_NOT_FOUND" ? "index banner asset does not exist" : "status is invalid" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
+  @Put("trace-pages/:id")
+  async updateTracePage(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    const result = await this.databaseService.mutateDb((db) => {
+      const item = db.tracePages.find((entry) => entry.id === id);
+      if (!item) {
+        return { error: "NOT_FOUND" as const };
+      }
+
+      if (body?.sn !== undefined) {
+        const sn = String(body.sn ?? "").trim();
+        if (!sn) {
+          return { error: "SN_REQUIRED" as const };
+        }
+
+        if (db.tracePages.some((entry) => entry.sn === sn && entry.id !== id)) {
+          return { error: "SN_EXISTS" as const };
+        }
+
+        item.sn = sn;
+      }
+
+      if (body?.indexBannerAssetIdsCsv !== undefined) {
+        const indexBannerAssetIdsCsv = String(body.indexBannerAssetIdsCsv ?? "").trim();
+        const assetIds = parseAssetIdsCsv(indexBannerAssetIdsCsv);
+        if (assetIds.some((assetId) => !db.mediaAssets.some((asset) => asset.id === assetId))) {
+          return { error: "ASSET_NOT_FOUND" as const };
+        }
+
+        item.indexBannerAssetIdsCsv = indexBannerAssetIdsCsv;
+      }
+
+      if (body?.status !== undefined) {
+        if (!isPublishStatus(body.status)) {
+          return { error: "INVALID_STATUS" as const };
+        }
+
+        item.status = body.status;
+      }
+
+      if (body?.consignorName !== undefined) {
+        const consignorName = String(body.consignorName ?? "").trim();
+        item.consignorName = consignorName || undefined;
+      }
+
+      if (body?.inspectionDate !== undefined) {
+        const inspectionDate = String(body.inspectionDate ?? "").trim();
+        item.inspectionDate = inspectionDate || undefined;
+      }
+
+      if (body?.traceContent !== undefined) {
+        const traceContent = String(body.traceContent ?? "");
+        item.traceContent = traceContent.trim() ? traceContent : undefined;
+      }
+
+      item.updatedAt = this.databaseService.nowIso();
+      return { data: item };
+    });
+
+    if ("error" in result) {
+      if (result.error === "NOT_FOUND") {
+        throw new HttpException({ message: "Trace page not found" }, HttpStatus.NOT_FOUND);
+      }
+
+      if (result.error === "SN_EXISTS") {
+        throw new HttpException({ message: "sn already exists" }, HttpStatus.CONFLICT);
+      }
+
+      throw new HttpException(
+        {
+          message:
+            result.error === "ASSET_NOT_FOUND"
+              ? "index banner asset does not exist"
+              : result.error === "SN_REQUIRED"
+                ? "sn is required"
+                : "status is invalid",
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
+  @Delete("trace-pages/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteTracePage(@Param("id") id: string) {
+    const ok = await this.databaseService.mutateDb((db) => {
+      const index = db.tracePages.findIndex((entry) => entry.id === id);
+      if (index < 0) {
+        return false;
+      }
+
+      db.tracePages.splice(index, 1);
+      return true;
+    });
+
+    if (!ok) {
+      throw new HttpException({ message: "Trace page not found" }, HttpStatus.NOT_FOUND);
+    }
+  }
+
+  @Put("trace-pages/by-sn/:sn")
+  async upsertTracePageBySn(@Param("sn") rawSn: string, @Body() body: Record<string, unknown>) {
+    const sn = String(rawSn ?? "").trim();
+
+    if (!sn) {
+      throw new HttpException({ message: "sn is required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const result = await this.databaseService.mutateDb((db) => {
+      const existing = db.tracePages.find((entry) => entry.sn === sn);
+      const status = body?.status;
+      if (status !== undefined && !isPublishStatus(status)) {
+        return { error: "INVALID_STATUS" as const };
+      }
+
+      const hasBannerPayload = body?.indexBannerAssetIdsCsv !== undefined;
+      const indexBannerAssetIdsCsv = hasBannerPayload
+        ? String(body.indexBannerAssetIdsCsv ?? "").trim()
+        : undefined;
+
+      if (indexBannerAssetIdsCsv !== undefined) {
+        const assetIds = parseAssetIdsCsv(indexBannerAssetIdsCsv);
+        if (assetIds.some((assetId) => !db.mediaAssets.some((asset) => asset.id === assetId))) {
+          return { error: "ASSET_NOT_FOUND" as const };
+        }
+      }
+
+      const now = this.databaseService.nowIso();
+
+      if (!existing) {
+        const item: TracePage = {
+          id: this.databaseService.newId(),
+          sn,
+          indexBannerAssetIdsCsv: indexBannerAssetIdsCsv ?? "",
+          consignorName: body?.consignorName ? String(body.consignorName).trim() : undefined,
+          inspectionDate: body?.inspectionDate ? String(body.inspectionDate).trim() : undefined,
+          traceContent: body?.traceContent ? String(body.traceContent) : undefined,
+          status: isPublishStatus(status) ? status : "DRAFT",
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        db.tracePages.unshift(item);
+        return { data: item };
+      }
+
+      if (indexBannerAssetIdsCsv !== undefined) {
+        existing.indexBannerAssetIdsCsv = indexBannerAssetIdsCsv;
+      }
+
+      if (body?.consignorName !== undefined) {
+        const consignorName = String(body.consignorName ?? "").trim();
+        existing.consignorName = consignorName || undefined;
+      }
+
+      if (body?.inspectionDate !== undefined) {
+        const inspectionDate = String(body.inspectionDate ?? "").trim();
+        existing.inspectionDate = inspectionDate || undefined;
+      }
+
+      if (body?.traceContent !== undefined) {
+        const traceContent = String(body.traceContent ?? "");
+        existing.traceContent = traceContent.trim() ? traceContent : undefined;
+      }
+
+      if (status !== undefined && isPublishStatus(status)) {
+        existing.status = status;
+      }
+
+      existing.updatedAt = now;
+      return { data: existing };
+    });
+
+    if ("error" in result) {
+      throw new HttpException(
+        { message: result.error === "ASSET_NOT_FOUND" ? "index banner asset does not exist" : "status is invalid" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
   @Get("trace-codes")
   async listTraceCodes() {
     const db = await this.databaseService.readDb();
@@ -810,3 +1067,4 @@ export class AdminController {
     }
   }
 }
+

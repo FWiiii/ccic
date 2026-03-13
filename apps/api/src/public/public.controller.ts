@@ -2,6 +2,12 @@ import { Controller, Get, HttpException, HttpStatus, Param } from "@nestjs/commo
 import type { MediaAsset, ProductImage, TracePageAggregate } from "../database/database.types";
 import { DatabaseService } from "../database/database.service";
 
+const parseAssetIdsCsv = (value: unknown) =>
+  String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
 @Controller("api/public")
 export class PublicController {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -86,5 +92,39 @@ export class PublicController {
     }
 
     return result;
+  }
+
+  @Get("trace-pages/:sn")
+  async getTracePageBySn(@Param("sn") rawSn: string) {
+    const sn = String(rawSn ?? "").trim();
+
+    if (!sn) {
+      throw new HttpException({ message: "sn is required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const db = await this.databaseService.readDb();
+    const tracePage = db.tracePages.find((item) => item.sn === sn && item.status === "PUBLISHED");
+
+    if (!tracePage) {
+      throw new HttpException({ message: "Trace page not found" }, HttpStatus.NOT_FOUND);
+    }
+
+    const indexBannerImages = parseAssetIdsCsv(tracePage.indexBannerAssetIdsCsv)
+      .map((assetId) => db.mediaAssets.find((item) => item.id === assetId))
+      .filter((item): item is MediaAsset => Boolean(item));
+
+    return {
+      data: {
+        sn: tracePage.sn,
+        indexBannerImages,
+        productInfo: {
+          consignorName: tracePage.consignorName ?? "",
+          inspectionDate: tracePage.inspectionDate ?? "",
+        },
+        traceInfo: {
+          content: tracePage.traceContent ?? "",
+        },
+      },
+    };
   }
 }
