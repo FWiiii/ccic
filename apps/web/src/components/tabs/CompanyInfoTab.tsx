@@ -1,4 +1,4 @@
-import companyLogo from "../../assets/template/mu/static/picture/910612857824215040.jpg";
+﻿import companyLogo from "../../assets/template/mu/static/picture/910612857824215040.jpg";
 import companyImageA from "../../assets/template/mu/static/picture/1666591927040077430.png";
 import companyImageB from "../../assets/template/mu/static/picture/1666591971967015074.jpg";
 import companyImageC from "../../assets/template/mu/static/picture/1590048828117098165.jpg";
@@ -11,7 +11,7 @@ interface CompanyInfoTabProps {
 
 const descriptionStyle = {
   color: "rgb(15, 36, 62)",
-  fontFamily: '寰蒋闆呴粦, "Microsoft YaHei"',
+  fontFamily: '微软雅黑, "Microsoft YaHei"',
 } as const;
 
 const richImageStyle = {
@@ -27,23 +27,23 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
       <div className="tab2-div"></div>
       <div className="tab2-div2">
         <img className="tab2-img" id="logo" src={companyLogo} onClick={() => onPreview(companyLogo)} alt="" />
-        <span className="companyname tab2-span">涓浗妫€楠岃璇侀泦鍥㈠ア渚堝搧閴村畾涓績</span>
+        <span className="companyname tab2-span">中国检验认证集团奢侈品鉴定中心</span>
 
         <div className="hb-box" style={{ display: "none" }}>
           <div className="hz-info dz-box">
-            <span className="hz-left">鍦板潃 : </span>
+            <span className="hz-left">地址 : </span>
             <span className="dz"></span>
           </div>
           <div className="hz-info dh-box">
-            <span className="hz-left">鐢佃瘽 : </span>
-            <span className="dh">姹熻嫃鐪?</span>
+            <span className="hz-left">电话 : </span>
+            <span className="dh">江苏省</span>
           </div>
           <div className="hz-info js-box">
-            <span className="hz-left">浠嬬粛 : </span>
-            <span className="js">姹熻嫃鐪?</span>
+            <span className="hz-left">介绍 : </span>
+            <span className="js">江苏省</span>
           </div>
           <div className="hz-info xc-box">
-            <span className="hz-left">瀹ｄ紶鍥剧墖 : </span>
+            <span className="hz-left">宣传图片 : </span>
             <div className="hz-img xctp"></div>
           </div>
         </div>
@@ -51,19 +51,19 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
         <span className="businessElectronicFile tab2-span2">
           <p>
             <span style={descriptionStyle}>
-              &nbsp; &nbsp; &nbsp; &nbsp;涓闆嗗洟濂緢鍝侀壌瀹氫腑蹇冩槸涓闆嗗洟璁剧珛鐨勪笓闂ㄤ粠浜嬪ア渚堝搧閴村畾涓庡煿璁笟鍔＄殑鈥滀腑鍥解€濆瓧澶寸涓夋柟濂緢鍝侀壌瀹氬钩鍙帮紝钀藉湴鍦ㄤ腑妫€鍖椾含鍏徃銆備腑妫€闆嗗洟濂緢鍝侀壌瀹氫腑蹇冭嚧鍔涗互鐙珛浜庝拱鍗栧悇鏂圭殑韬唤锛屼负绀句細鍚勭晫鎻愪緵鍏銆佽瘹淇＄殑濂緢鍝侀壌瀹氬強鍩硅鏈嶅姟銆?
+              &nbsp; &nbsp; &nbsp; &nbsp;中检集团奢侈品鉴定中心是中检集团设立的专门从事奢侈品鉴定与培训业务的“中国”字头第三方奢侈品鉴定平台，落地在中检北京公司。中检集团奢侈品鉴定中心致力以独立于买卖各方的身份，为社会各界提供公正、诚信的奢侈品鉴定及培训服务。
             </span>
           </p>
           <p>
             <span style={descriptionStyle}>
-              &nbsp; &nbsp; &nbsp; &nbsp;涓闆嗗洟濂緢鍝侀壌瀹氫腑蹇冧笌涓闆嗗洟婧簮鎶€鏈湇鍔℃湁闄愬叕鍙稿叡鍚屾墦閫犱簡涓濂緢鍝侀壌瀹氭函婧愰槻浼郴缁燂紝鍚戝鐣屾寮忔帹鍑哄ア渚堝搧閴村畾婧簮闃蹭吉鏈嶅姟銆傝绯荤粺搴旂敤鈥滀竴鍝侊紙鐗╋級涓€鐮佲€濇函婧愪笓鍒╅槻浼妧鏈紝閫氳繃鎵竴鎵紝灏辫兘闅忔椂浜嗚В濂緢鍝侀壌瀹氫俊鎭紝鐪熸鍋氬埌閴村畾婧簮闃蹭吉涓€浣撳寲锛屼负濂緢鍝佸競鍦轰繚椹炬姢鑸€傜粡杩囬壌瀹氭函婧愮殑濂緢鍝侀兘浼氭湁涓涓ア涓績鈥滈壌瀹氭函婧怚D韬唤璇佲€濓紝鈥滈獙鏄庢韬€濈殑鍚屾椂锛屾彁鍗囨秷璐逛綋楠岋紝璁╂秷璐硅€呰喘鐗╂洿鏀惧績銆?
+              &nbsp; &nbsp; &nbsp; &nbsp;中检集团奢侈品鉴定中心与中检集团溯源技术服务有限公司共同打造了中检奢侈品鉴定溯源防伪系统，向外界正式推出奢侈品鉴定溯源防伪服务。该系统应用“一品（物）一码”溯源专利防伪技术，通过扫一扫，就能随时了解奢侈品鉴定信息，真正做到鉴定溯源防伪一体化，为奢侈品市场保驾护航。经过鉴定溯源的奢侈品都会有中检中奢中心“鉴定溯源ID身份证”，“验明正身”的同时，提升消费体验，让消费者购物更放心。
             </span>
           </p>
           <p>
             <span style={descriptionStyle}>
               &nbsp; &nbsp; &nbsp; &nbsp;
-              <span style={{ color: "rgb(227, 108, 9)", fontFamily: '寰蒋闆呴粦, "Microsoft YaHei"' }}>
-                <strong>鑱旂郴鐢佃瘽锛?10-58619556&nbsp;</strong>
+              <span style={{ color: "rgb(227, 108, 9)", fontFamily: '微软雅黑, "Microsoft YaHei"' }}>
+                <strong>联系电话：010-58619556&nbsp;</strong>
               </span>
             </span>
           </p>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { HeroImage } from "./components/HeroImage";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { PageFooter } from "./components/PageFooter";
@@ -48,7 +48,7 @@ export default function App() {
         <div id="codeunsetshow" className="unsetshowdiv">
           <div className="unsetshowdoublediv">
             <div className="unsetshowthreediv">
-              <span>姝よ拷婧爜鏃犳晥銆傚彲鑱旂郴涓婧簮鏈嶅姟鐑嚎0512-67998071鍜ㄨ銆?</span>
+              <span>此追溯码无效。可联系中检溯源服务热线0512-67998071咨询。</span>
             </div>
             <div className="ht50">
               <div id="enterccic" className="unsetshowfourdiv">
@@ -62,16 +62,16 @@ export default function App() {
           <div className="unsetshowdoublediv">
             <div className="unsetshowthreediv">
               <span>
-                涓嬭浇璇ユ枃浠跺皢浜х敓<i className="c-font-normal" id="file-size"></i>鐨勬祦閲?
+                下载该文件将产生<i className="c-font-normal" id="file-size"></i>的流量
               </span>
-              <span className="c-pt-0">鏄惁纭涓嬭浇?</span>
+              <span className="c-pt-0">是否确认下载?</span>
             </div>
             <div className="ht50">
               <a id="file-download-btn" className="download-btn-frame" href="#" onClick={(e) => e.preventDefault()}>
-                <span>纭</span>
+                <span>确认</span>
               </a>
               <div id="file-cancal-btn" className="download-btn-frame">
-                <span>鍙栨秷</span>
+                <span>取消</span>
               </div>
             </div>
           </div>

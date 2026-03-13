@@ -1,0 +1,669 @@
+ul {
+    margin: 0;
+    padding: 0;
+}
+
+.bodyWarp {
+    width: 100%;
+    margin: 0 auto;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.head {
+    padding: 6.5% 20px 6% 20px;
+    border: none;
+}
+
+.head .topBuy {
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.topReturn {
+    position: absolute;
+    top: 15px;
+}
+
+
+/* 悬浮 */
+
+.cx {
+    padding: 0.5rem 0;
+    width: 3.5rem;
+    border-radius: 0.15625rem;
+    font-size: 0.375rem;
+    color: #fff;
+    opacity: 0.72;
+    text-align: center;
+    line-height: 0.5rem;
+    position: fixed;
+    top: 66%;
+    right: 0;
+    z-index: 99999;
+    background: #0375d5;
+    cursor: pointer;
+    display: none;
+}
+
+.cx>div {
+    display: inline-block;
+    font-size: 0.7rem;
+    line-height: 1rem;
+}
+
+
+/*首页轮播图*/
+
+#slide {
+    position: relative;
+    overflow: hidden;
+    width: auto;
+}
+
+#slide .page {
+    position: relative;
+    width: 100%;
+}
+
+#slide .slidesjs-pagination {
+    display: block;
+    z-index: 11;
+    position: absolute;
+    left: 50%;
+    bottom: 3%;
+    margin-top: 0;
+    margin-bottom: 0;
+    padding: 0;
+    list-style: none;
+}
+
+#slide .slidesjs-pagination li {
+    position: relative;
+    float: left;
+    margin: 0 1px;
+    width: 10px;
+    height: 10px;
+    margin-left: 5.9px;
+    margin-right: 3.7px;
+    overflow: hidden;
+}
+
+#slide .slidesjs-pagination li a {
+    display: block;
+    overflow: hidden;
+    text-indent: 9999px;
+    width: 10px;
+    height: 10px;
+    border-radius: 16px;
+    background-color: #fff
+}
+
+#slide .slidesjs-pagination li a:hover {
+    background-color: #ff6600
+}
+
+#slide .slidesjs-pagination li a.active {
+    background-color: #ff6600
+}
+
+
+/*首页选择链接区*/
+
+.chance {
+    padding: 0 20px;
+    padding-top: 48px;
+    padding-bottom: 42px;
+}
+
+.chance li {
+    float: left;
+    width: 25%;
+    text-align: center;
+}
+
+.chance li a {
+    display: block;
+    border-right: 1px solid #ccc;
+}
+
+.chance li:last-child a {
+    border-right: none;
+}
+
+.chance li a p {
+    font-size: 24px;
+    color: #333;
+    margin-top: 24px;
+}
+
+.text-c {
+    text-align: center
+}
+
+
+/*展示图片区*/
+
+.indexList ul li {
+    margin-top: 15px;
+}
+
+.indexList {
+    padding-bottom: 29px;
+}
+
+.indexList ul li img {
+    width: 100%;
+    max-width: initial;
+}
+
+
+/*侧边栏*/
+
+.content_frame dl {
+    margin: 0;
+}
+
+.content_frame .person dt p {
+    background: url(../images/hmy_sideperson.png) no-repeat;
+    padding-left: 50px;
+    letter-spacing: 2px;
+}
+
+.content_frame .shop dt p {
+    background: url(../images/hmy_sideimg02.png) no-repeat;
+    padding-left: 50px;
+    letter-spacing: 2px;
+}
+
+.content_frame .about dt p {
+    background: url(../images/hmy_sideimg03.png) no-repeat;
+    padding-left: 50px;
+    letter-spacing: 2px;
+}
+
+.content_frame dl dt {
+    font-size: 28px;
+    color: #333;
+    border-bottom: 1px solid #828282;
+}
+
+.content_frame .person dt {
+    padding: 28.5px 0;
+    padding-left: 46px;
+}
+
+.content_frame .shop dt {
+    padding: 32px 0 20px 0;
+    padding-left: 46px;
+    margin-bottom: 3px;
+}
+
+.content_frame .about dt {
+    padding: 27px 0;
+    padding-left: 46px;
+    margin-bottom: 3px;
+}
+
+.content_frame dl dt img {
+    vertical-align: middle;
+    margin-top: -12px;
+    margin-right: 12px;
+}
+
+.content_frame dl dd {
+    margin-left: 97px;
+}
+
+.content_frame .person dd {
+    margin-top: 6px;
+}
+
+.content_frame dl dd a {
+    display: block;
+    color: #333;
+    font-size: 24px;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #d6d6d6;
+}
+
+.content_frame .person dd a {
+    padding: 18px 0 22px 0;
+}
+
+.content_frame .shop dd a,
+.content_frame .about dd a {
+    padding: 15px 0 24px 0;
+}
+
+.content_frame dl dd a:last-child {
+    border: none;
+    /*padding-bottom: 0;*/
+}
+
+.content_frame {
+    width: 65%;
+    height: 100%;
+    position: fixed;
+    top: 0px;
+    left: -65%;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 888;
+    background-color: #f6f6f6;
+}
+
+.w80-per {
+    width: 80%;
+}
+
+.p-4 {
+    padding: 0.4rem;
+}
+
+.sideMask {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0);
+    z-index: 99;
+    display: none;
+}
+
+.download-btn-frame {
+    width: 50%;
+    float: left;
+    height: 50px;
+    line-height: 50px;
+}
+
+.download-open-img {
+    width: 75px;
+    top: 10px;
+    right: 10px;
+    position: absolute;
+}
+
+.download-open-frame {
+    position: absolute;
+    color: white;
+    top: 180px;
+    width: 100%;
+}
+
+.download-open-frame p {
+    height: 25px;
+    line-height: 25px;
+    text-align: center;
+}
+
+.download-open-menu {
+    width: 25px;
+    vertical-align: middle;
+    margin-top: -2px;
+}
+
+.c-font-normal {
+    font-style: normal;
+}
+
+.c-clear-left {
+    clear: left;
+}
+
+.supervise {
+    text-align: center;
+    padding: 0.2rem;
+    display: none;
+    /*background: #e0e3e6;*/
+}
+
+.supervise-box {
+    /*width: 15.5rem;*/
+    margin: auto;
+    font-size: 0.7rem;
+}
+
+.supervise-input {
+    width: 60%;
+    height: 2rem;
+    padding-left: 0.5rem;
+    border: none;
+    background: #d0d2d4;
+    vertical-align: middle;
+    border-radius: 0;
+    -webkit-appearance: none;
+    border-top-left-radius: 0.2rem;
+    border-bottom-left-radius: 0.2rem
+}
+
+.supervise-but {
+    width: 40%;
+    vertical-align: bottom;
+    height: 2rem;
+    color: #fff;
+    border: none;
+    letter-spacing: 1px;
+    background: #005bac;
+    border-radius: 0;
+    -webkit-appearance: none;
+    border-top-right-radius: 0.2rem;
+    border-bottom-right-radius: 0.2rem;
+}
+
+.supervise-tit {
+    text-align: left;
+    padding: 0 0.5rem;
+    color: #0475d7;
+    display: none;
+    /*    border-bottom: 1px solid #0475d7;*/
+}
+
+.supervise-line {
+    border-bottom: 1px solid #0475d7;
+    padding-left: 0.5rem;
+}
+
+.traceInfo {
+    display: block;
+    padding-top: 5px;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.traceInfo-tit {
+    color: #333;
+    font-weight: bold;
+    font-size: 0.6rem;
+}
+
+.traceInfo-dls {
+    color: #666;
+    font-size: 0.6rem;
+}
+
+.traceInfo-icn {
+    position: absolute;
+    left: 15px;
+    width: 21px;
+    height: 21px;
+}
+
+.trace-up {
+    padding: 14px;
+    padding-left: 8px;
+    padding-top: 0px;
+    margin-top: 14px;
+}
+
+.trace-title {
+    font-weight: bold;
+    color: #000;
+    font-size: 0.7rem;
+}
+
+.operation {
+    color: #666;
+    font-weight: bold;
+    padding-right: 4px;
+    font-size: 0.7rem;
+}
+
+.operation-icon {
+    display: block;
+    float: right;
+    padding-top: 6%;
+    padding-bottom: 9%;
+    transform: rotate(180deg);
+}
+
+.operation-line {
+    border-bottom: 1px solid #bfbfbf;
+    height: 1px;
+}
+
+.trace-down {
+    display: none;
+    margin: 0.1rem;
+    border-radius: 10px;
+    margin-top: 10px;
+}
+
+.traceDown-Info {
+    height: 32px;
+    border-radius: 10px 10px 0px 0px;
+    background-color: #005bac;
+    border: 1px solid #005bac;
+}
+
+.traceDown-img {
+    height: 100%;
+    padding: 5px;
+    padding-left: 13px;
+    float: left;
+}
+
+.traceDown-title {
+    display: block;
+    float: left;
+    color: white;
+    font-weight: bold;
+    line-height: 32px;
+    padding-left: 12px;
+    font-size: 0.6rem;
+}
+
+.trace-box {
+    border-radius: 0px 0px 10px 10px;
+    border-bottom: 1px solid #bfbfbf;
+    border-left: 1px solid #bfbfbf;
+    border-right: 1px solid #bfbfbf;
+    padding-bottom: 10px;
+    font-size: 15px;
+}
+
+.traceDown-font {
+    color: #666;
+    font-size: 0.6rem;
+}
+
+.sf-float {
+    position: absolute;
+    z-index: 10;
+    top: 1.5rem;
+    right: 1rem;
+}
+
+.pb-dot3 {
+    padding-bottom: 0.3rem;
+}
+
+.pr-dot5 {
+    padding-right: 0.5rem;
+}
+
+.fw-600 {
+    font-weight: 600;
+}
+
+.sf-log0 {
+    border: 1px solid rgb(228, 228, 228);
+    border-bottom: 0;
+    padding-top: 0.2rem;
+    padding-left: 0.2rem;
+}
+
+.labelInfo {
+    background: #e0f1ff;
+    height: auto;
+    font-size: 12px;
+    padding: 0.5rem 0.9rem;
+}
+
+.clearance {
+    background: #f0f0f0;
+    height: 0.5rem;
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+}
+
+
+/*//奢侈品*/
+
+.wper-50 {
+    width: 50%;
+}
+
+.scBg {
+    background: url(../images/scpbg.jpg) top left repeat #efeff4;
+    background-size: 207px;
+    width: 100%;
+    /*height: 100%;*/
+}
+
+.scp-li {
+    padding: 0.3rem;
+}
+
+.pl-z2rem {
+    padding-left: 0.2rem;
+}
+
+.n-name-content-2 {
+    font-size: 0.75rem;
+    line-height: 1.2rem;
+    color: #000;
+    display: inline-block;
+    font-weight: 600;
+    padding-left: 0.12rem;
+    word-wrap: break-word;
+}
+
+.n-product-name-2 {
+    border: 1px solid #ea6200;
+    border-radius: 0.2rem;
+    text-align: center;
+    display: inline-block;
+    height: 1rem;
+    line-height: 1rem;
+    width: 3rem;
+    color: #ea6200;
+    font-size: 0.65rem;
+}
+
+.jdSPhoto {
+    width: 100%;
+    padding: 0.6rem;
+}
+
+.mould {
+    width: 6rem;
+    height: 6rem;
+    text-align: center;
+    margin: auto;
+    border-radius: 3rem;
+    overflow: hidden;
+}
+
+.mould img {
+    width: 100%;
+}
+
+.jdsName {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    padding-top: 0.4rem;
+    padding-bottom: 0.3rem;
+    font-weight: bold;
+    font-size: 0.7rem;
+    color: #000;
+}
+
+.jdsInfo-tit {
+    display: inline-block;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-align: center;
+    width: 100%;
+    padding-bottom: 0.4rem;
+    color: #000;
+}
+
+.jds-certificate {
+    padding-top: 0.9rem;
+}
+
+.jds-introduce {
+    font-size: 0.7rem;
+    width: 100%;
+    padding: 0 3%;
+}
+
+.jds-zs {
+    display: inline-block;
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+}
+.custom-li{
+	width: 100%;
+    padding: 0 0.95rem;
+    font-size: 0.65rem;
+    margin: 0.3rem 0;
+    box-sizing: border-box;
+
+}
+.custom-li-left{
+    width: 26%;
+    font-weight: 600;
+	text-align: right;
+}
+.custom-li-right{
+/* 	display: inline-block;
+    width: 80%;
+    word-wrap: break-word;
+    word-break: normal;
+    float: left; */
+    padding-left: 1%;
+}
+.new-row {
+	display: table;
+	table-layout: fixed;
+	border-spacing: 0;
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.new-col {
+	display: table-cell;
+	vertical-align: middle;
+	word-break: break-all;
+}
+
+.new-col-top {
+	display: table-cell;
+	vertical-align: middle;
+	word-break: break-all;
+	vertical-align: top;
+}
+
+.new-col-auto {
+	display: table-cell;
+	vertical-align: middle;
+	word-break: break-all;
+	width: 1px;
+	white-space: nowrap;
+}
+
+.new-row-auto {
+	display: table;
+	table-layout: fixed;
+	border-spacing: 0;
+	box-sizing: border-box;
+	width: 100%;
+	table-layout: auto;
+}

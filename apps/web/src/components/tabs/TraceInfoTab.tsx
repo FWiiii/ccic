@@ -1,4 +1,4 @@
-import dotIcon from "../../assets/template/mu/static/picture/dot1.jpg";
+﻿import dotIcon from "../../assets/template/mu/static/picture/dot1.jpg";
 import recordIcon from "../../assets/template/mu/static/picture/1.jpg";
 import toggleIcon from "../../assets/template/mu/static/picture/data3.jpg";
 
@@ -24,13 +24,13 @@ export function TraceInfoTab({ expanded, onToggle }: TraceInfoTabProps) {
           style={{ padding: "14px", paddingLeft: "8px", paddingTop: 0, marginTop: "14px" }}
           onClick={onToggle}
         >
-          <span style={{ fontWeight: "bold", color: "#000", fontSize: "0.7rem" }}>濮旀墭鍗曚綅绠€浠?</span>
+          <span style={{ fontWeight: "bold", color: "#000", fontSize: "0.7rem" }}>委托单位简介</span>
           <div style={{ float: "right" }}>
             <span
               className="Icons"
               style={{ color: "#666", fontWeight: "bold", paddingRight: "8px", fontSize: "0.7rem" }}
             >
-              {expanded ? "鏀惰捣" : "灞曞紑"}
+              {expanded ? "收起" : "展开"}
             </span>
             <img
               className="showIcon"
@@ -81,7 +81,7 @@ export function TraceInfoTab({ expanded, onToggle }: TraceInfoTabProps) {
                 fontSize: "0.6rem",
               }}
             >
-              {" "}2026-1-30璁板綍
+              {" "}2026-1-30记录
             </span>
           </div>
           <div
@@ -98,7 +98,7 @@ export function TraceInfoTab({ expanded, onToggle }: TraceInfoTabProps) {
               id="ccc"
             >
               <span style={{ color: "#333", fontWeight: "bold", display: "block", fontSize: "0.6rem" }}>
-                濮旀墭鍗曚綅绠€浠?: <span id="vvv">娓煄鍥介檯</span>
+                委托单位简介: <span id="vvv">港城国际</span>
               </span>
             </label>
 

@@ -1,4 +1,4 @@
-export type TabKey = "taba" | "tabb" | "tabc";
+﻿export type TabKey = "taba" | "tabb" | "tabc";
 
 interface TopTabsProps {
   activeTab: TabKey;
@@ -6,9 +6,9 @@ interface TopTabsProps {
 }
 
 const tabOptions: Array<{ key: TabKey; label: string }> = [
-  { key: "taba", label: "浜у搧淇℃伅" },
-  { key: "tabb", label: "浼佷笟淇℃伅" },
-  { key: "tabc", label: "杩芥函淇℃伅" },
+  { key: "taba", label: "产品信息" },
+  { key: "tabb", label: "企业信息" },
+  { key: "tabc", label: "追溯信息" },
 ];
 
 export function TopTabs({ activeTab, onChange }: TopTabsProps) {

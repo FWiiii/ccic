@@ -1,4 +1,4 @@
-const paragraphStyle = {
+﻿const paragraphStyle = {
   marginTop: "5px",
   marginRight: 0,
   marginBottom: "5px",
@@ -12,36 +12,28 @@ export function ProductInfoTab() {
     <div className="richTextContent app-richtext" id="richtext" style={{ display: "block" }}>
       <p style={paragraphStyle} id="dddd">
         <strong>
-          濮旀墭鍗曚綅锛氭腐鍩庡浗闄?<br />鏍搁獙鏃ユ湡锛?026-1-30
+          委托单位：港城国际<br />核验日期：2026-1-30
         </strong>
       </p>
 
       <p style={paragraphStyle}>
-        <strong>妫€楠岀粨璁猴細閫佹鏍峰搧绗﹀悎鍝佺墝鏂瑰晢鍝佸瑙傚伐鑹虹壒寰併€?</strong>
+        <strong>检验结论：送检样品符合品牌方商品外观工艺特征。</strong>
       </p>
 
       <p style={paragraphStyle}>
-        <strong>
-          澶囨敞锛?銆佹楠岀粨鏋滀粎瀵归€佹鏍峰搧璐熻矗锛岃嫢鏍囩鎹熸瘉銆佹爣绛炬秱鏀癸紝鏄剧ず鍐呭鏃犳晥锛?
-        </strong>
+        <strong>备注：1、检验结果仅对送检样品负责，若标签损毁、标签涂改，显示内容无效；</strong>
       </p>
 
       <p style={paragraphStyle}>
-        <strong>
-          2銆佽嫢瀵规樉绀虹殑鍐呭鍜岀粨璁烘寔鏈夊紓璁紝闇€鍦ㄦ楠屾棩鏈熷悗15鏃ュ唴鎻愬嚭锛岄€炬湡涓嶄簣鍙楃悊锛?
-        </strong>
+        <strong>2、若对显示的内容和结论持有异议，需在检验日期后15日内提出，逾期不予受理；</strong>
       </p>
 
       <p style={paragraphStyle}>
-        <strong>
-          3銆佸搧鐗屾柟涓哄晢鍝佺殑璁捐鍙婂埗閫犳柟锛屽鍝佺墝鏂圭‘璁よ閴村畾鏍峰搧涓哄搧鐗屾柟鍒堕€犲強閿€鍞晢鍝侊紝浠ュ搧鐗屾柟鐨勭粨璁轰负鍑嗭紱
-        </strong>
+        <strong>3、品牌方为商品的设计及制造方，如品牌方确认该鉴定样品为品牌方制造及销售商品，以品牌方的结论为准；</strong>
       </p>
 
       <p style={paragraphStyle}>
-        <strong>
-          4銆佸鎴蜂俊鎭強鏍峰搧鍧囩敱濮旀墭鍗曚綅鎻愪緵锛屾楠岀粨鏋滀笉娑夊強鏍峰搧鍝佽川妫€娴嬬瓑淇℃伅銆?
-        </strong>
+        <strong>4、客户信息及样品均由委托单位提供，检验结果不涉及样品品质检测等信息。</strong>
       </p>
     </div>
   );
