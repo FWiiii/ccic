@@ -1,14 +1,10 @@
-﻿import type { MediaAsset } from "@ccic/shared-types";
 import bannerImage from "../assets/static/upload/image/20260130/1769762711981592.jpg";
 
 interface ProductCarouselProps {
-  images?: MediaAsset[];
   onPreview: (src: string) => void;
 }
 
-export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
-  const firstImage = images?.[0]?.url || bannerImage;
-
+export function ProductCarousel({ onPreview }: ProductCarouselProps) {
   return (
     <div className="indexBanner">
       <div id="slide" style={{ overflow: "hidden", textAlign: "center" }}>
@@ -16,9 +12,9 @@ export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
           <div className="swiper-wrapper">
             <div className="swiper-slide" style={{ height: "270px" }}>
               <img
-                src={firstImage}
+                src={bannerImage}
                 style={{ height: "270px" }}
-                onClick={() => onPreview(firstImage)}
+                onClick={() => onPreview(bannerImage)}
                 alt=""
               />
             </div>

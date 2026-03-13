@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import type { TracePageAggregate } from "@ccic/shared-types";
+import { useState } from "react";
 import { HeroImage } from "./components/HeroImage";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { PageFooter } from "./components/PageFooter";
@@ -10,126 +9,49 @@ import { CompanyInfoTab } from "./components/tabs/CompanyInfoTab";
 import { ProductInfoTab } from "./components/tabs/ProductInfoTab";
 import { TraceInfoTab } from "./components/tabs/TraceInfoTab";
 
-const DEFAULT_TRACE_CODE = "CCIC-DEMO-0001";
-
-function getTraceCodeFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("code")?.trim() || DEFAULT_TRACE_CODE;
-}
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("taba");
   const [expanded, setExpanded] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [traceCode] = useState(getTraceCodeFromUrl);
-  const [aggregate, setAggregate] = useState<TracePageAggregate | null>(null);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [hideErrorDialog, setHideErrorDialog] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadTraceData() {
-      try {
-        const response = await fetch(`/api/public/traces/${encodeURIComponent(traceCode)}`);
-        const payload = (await response.json()) as { data?: TracePageAggregate; message?: string };
-
-        if (!response.ok || !payload.data) {
-          throw new Error(payload.message || "追溯码无效");
-        }
-
-        if (cancelled) {
-          return;
-        }
-
-        setAggregate(payload.data);
-        setRequestError(null);
-        setHideErrorDialog(false);
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        setAggregate(null);
-        setRequestError(error instanceof Error ? error.message : "追溯码无效");
-        setHideErrorDialog(false);
-      }
-    }
-
-    void loadTraceData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [traceCode]);
 
   return (
     <div className="page-group app-root">
       <div className="page page-current" id="xindex">
-        <HeroImage src={aggregate?.heroImage?.url} />
+        <HeroImage />
         <PageFooter />
 
         <div className="content contentDivOne native-scroll" style={{ paddingTop: 0 }}>
-          <ProductCarousel images={aggregate?.carouselImages} onPreview={setPreviewImage} />
-          <ProductSummary
-            productName={aggregate?.product.name}
-            companyName={aggregate?.company.name}
-          />
+          <ProductCarousel onPreview={setPreviewImage} />
+          <ProductSummary />
           <TopTabs activeTab={activeTab} onChange={setActiveTab} />
 
           <div className="c-clear-left">
             <div className="tabs" style={{ fontSize: "12px" }}>
               <div id="tab1" className={`tab taba ${activeTab === "taba" ? "active" : ""}`}>
-                <ProductInfoTab
-                  productInfoHtml={aggregate?.product.productInfoHtml}
-                  consignorName={aggregate?.inspectionReport?.consignorName}
-                  inspectionDate={aggregate?.inspectionReport?.inspectionDate}
-                  conclusion={aggregate?.inspectionReport?.conclusion}
-                  notes={aggregate?.inspectionReport?.notes}
-                  rawHtml={aggregate?.inspectionReport?.rawHtml}
-                />
+                <ProductInfoTab />
               </div>
 
               <div id="tab2" className={`tab tabb ${activeTab === "tabb" ? "active" : ""}`}>
-                <CompanyInfoTab
-                  onPreview={setPreviewImage}
-                  companyName={aggregate?.company.name}
-                  companyPhone={aggregate?.company.phone}
-                  descriptionHtml={aggregate?.company.descriptionHtml}
-                  logoSrc={aggregate?.companyLogo?.url}
-                  images={aggregate?.companyDetailImages}
-                />
+                <CompanyInfoTab onPreview={setPreviewImage} />
               </div>
 
               <div
                 id="tab3"
                 className={`tab tabc autoheigth ${activeTab === "tabc" ? "active" : ""}`}
               >
-                <TraceInfoTab
-                  expanded={expanded}
-                  onToggle={() => setExpanded((value) => !value)}
-                  events={aggregate?.traceEvents}
-                />
+                <TraceInfoTab expanded={expanded} onToggle={() => setExpanded((value) => !value)} />
               </div>
             </div>
           </div>
         </div>
 
-        <div
-          id="codeunsetshow"
-          className="unsetshowdiv"
-          style={{ display: requestError && !hideErrorDialog ? "block" : "none" }}
-        >
+        <div id="codeunsetshow" className="unsetshowdiv">
           <div className="unsetshowdoublediv">
             <div className="unsetshowthreediv">
-              <span>{requestError || "追溯码无效，请联系服务方。"}</span>
+              <span>姝よ拷婧爜鏃犳晥銆傚彲鑱旂郴涓婧簮鏈嶅姟鐑嚎0512-67998071鍜ㄨ銆?</span>
             </div>
             <div className="ht50">
-              <div
-                id="enterccic"
-                className="unsetshowfourdiv"
-                onClick={() => setHideErrorDialog(true)}
-              >
+              <div id="enterccic" className="unsetshowfourdiv">
                 <span>OK</span>
               </div>
             </div>
