@@ -1,0 +1,6 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640">
+  <rect width="960" height="640" fill="#e3f2fd"/>
+  <circle cx="260" cy="320" r="120" fill="#64b5f6"/>
+  <rect x="410" y="220" width="320" height="220" rx="20" fill="#0d47a1"/>
+  <text x="80" y="560" font-size="42" fill="#0d47a1" font-family="Segoe UI, Arial">Product Image</text>
+</svg>

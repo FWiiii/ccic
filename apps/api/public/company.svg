@@ -1,0 +1,5 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640">
+  <rect width="960" height="640" fill="#fff3e0"/>
+  <rect x="140" y="120" width="680" height="400" rx="24" fill="#ef6c00" opacity="0.2"/>
+  <text x="210" y="330" font-size="56" fill="#bf360c" font-family="Segoe UI, Arial">Company Image</text>
+</svg>

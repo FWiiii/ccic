@@ -1,0 +1,173 @@
+{
+  "adminUsers": [
+    {
+      "id": "user-admin-1",
+      "username": "admin",
+      "password": "admin123",
+      "displayName": "系统管理员",
+      "role": "SUPER_ADMIN",
+      "status": "ACTIVE",
+      "createdAt": "2026-03-13T00:00:00.000Z",
+      "updatedAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "mediaAssets": [
+    {
+      "id": "media-hero-1",
+      "url": "http://localhost:4000/static/hero.svg",
+      "name": "商品主图",
+      "mimeType": "image/svg+xml",
+      "sizeBytes": 1200,
+      "width": 1200,
+      "height": 420,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "media-carousel-1",
+      "url": "http://localhost:4000/static/product.svg",
+      "name": "轮播图",
+      "mimeType": "image/svg+xml",
+      "sizeBytes": 980,
+      "width": 960,
+      "height": 640,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "media-company-1",
+      "url": "http://localhost:4000/static/company.svg",
+      "name": "企业图",
+      "mimeType": "image/svg+xml",
+      "sizeBytes": 980,
+      "width": 960,
+      "height": 640,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "companies": [
+    {
+      "id": "company-1",
+      "name": "中检奢品鉴定中心",
+      "shortName": "中检奢品",
+      "phone": "010-58619556",
+      "address": "北京市朝阳区示例路 100 号",
+      "descriptionHtml": "<p>这是企业介绍示例文本，可在后台修改并发布。</p>",
+      "logoAssetId": "media-company-1",
+      "status": "PUBLISHED",
+      "createdAt": "2026-03-13T00:00:00.000Z",
+      "updatedAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "products": [
+    {
+      "id": "product-1",
+      "sku": "SKU-DEMO-001",
+      "name": "LOUIS VUITTON 手袋",
+      "brand": "LOUIS VUITTON",
+      "model": "DEMO-2026",
+      "summary": "演示商品，用于联调前后台和公开查询接口。",
+      "productInfoHtml": "<p>这是一条示例产品说明，后续可由后台维护。</p>",
+      "companyId": "company-1",
+      "status": "PUBLISHED",
+      "publishedAt": "2026-03-13T00:00:00.000Z",
+      "createdAt": "2026-03-13T00:00:00.000Z",
+      "updatedAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "productImages": [
+    {
+      "id": "binding-hero-1",
+      "productId": "product-1",
+      "assetId": "media-hero-1",
+      "scene": "HERO",
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "binding-carousel-1",
+      "productId": "product-1",
+      "assetId": "media-carousel-1",
+      "scene": "CAROUSEL",
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "binding-company-detail-1",
+      "productId": "product-1",
+      "assetId": "media-company-1",
+      "scene": "COMPANY_DETAIL",
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "inspectionReports": [
+    {
+      "id": "report-1",
+      "productId": "product-1",
+      "consignorName": "港城国际",
+      "inspectionDate": "2026-01-30",
+      "conclusion": "送检样品符合品牌方商品外观工艺特征。",
+      "notes": [
+        "检验结果仅对送检样品负责。",
+        "对结果有异议请在 15 日内提出。"
+      ],
+      "rawHtml": "<p>这里是原始报告 HTML（可选）。</p>",
+      "createdAt": "2026-03-13T00:00:00.000Z",
+      "updatedAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "traceCodes": [
+    {
+      "id": "trace-1",
+      "code": "CCIC-DEMO-0001",
+      "productId": "product-1",
+      "verifyStatus": "VALID",
+      "verifyCount": 3,
+      "createdAt": "2026-03-13T00:00:00.000Z",
+      "lastVerifiedAt": "2026-03-13T07:43:43.254Z",
+      "firstVerifiedAt": "2026-03-13T05:01:50.354Z"
+    }
+  ],
+  "traceEvents": [
+    {
+      "id": "event-1",
+      "traceCodeId": "trace-1",
+      "eventTime": "2026-01-30T08:00:00.000Z",
+      "eventType": "INSPECTION",
+      "title": "送检完成",
+      "content": "样品由委托方提交并完成登记。",
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "event-2",
+      "traceCodeId": "trace-1",
+      "eventTime": "2026-01-30T10:30:00.000Z",
+      "eventType": "CERTIFIED",
+      "title": "鉴定完成",
+      "content": "鉴定结论已生成并发布。",
+      "sortOrder": 2,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "traceVerifyLogs": [
+    {
+      "id": "97bfd04e-69f2-4d4e-b122-38e01c90c138",
+      "traceCodeId": "trace-1",
+      "verifyAt": "2026-03-13T07:43:43.254Z",
+      "isValid": true
+    },
+    {
+      "id": "c3b835e8-b689-4da3-9c5b-9729294ad393",
+      "traceCodeId": "trace-1",
+      "verifyAt": "2026-03-13T07:39:58.592Z",
+      "isValid": true
+    },
+    {
+      "id": "5709a155-bfa2-4547-83e6-954d4c00cdc8",
+      "traceCodeId": "trace-1",
+      "verifyAt": "2026-03-13T05:01:50.354Z",
+      "isValid": true
+    }
+  ],
+  "auditLogs": []
+}
