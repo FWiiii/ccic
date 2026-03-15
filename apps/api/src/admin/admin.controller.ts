@@ -16,6 +16,9 @@ import { AdminAuthGuard } from "../auth/admin-auth.guard";
 import { DatabaseService } from "../database/database.service";
 import type {
   Company,
+  Inspection,
+  InspectionEvent,
+  InspectionImage,
   MediaAsset,
   Product,
   ProductImage,
@@ -38,6 +41,17 @@ const isTraceEventType = (value: unknown): value is TraceEvent["eventType"] =>
 const isProductImageScene = (value: unknown): value is ProductImage["scene"] =>
   ["HERO", "CAROUSEL", "COMPANY_DETAIL", "DETAIL"].includes(String(value));
 
+const isInspectionStatus = (value: unknown): value is Inspection["status"] =>
+  ["DRAFT", "REVIEWED", "PUBLISHED", "REVOKED"].includes(String(value));
+
+const isInspectionResult = (value: unknown): value is Inspection["result"] =>
+  ["PASS", "FAIL", "PENDING"].includes(String(value));
+
+const isInspectionImageScene = (value: unknown): value is InspectionImage["scene"] =>
+  ["HERO", "DETAIL", "CERT", "OTHER"].includes(String(value));
+
+const isInspectionEventType = (value: unknown): value is InspectionEvent["eventType"] =>
+  ["SUBMIT", "SAMPLE_RECEIVED", "INSPECTION", "CERTIFIED", "PUBLISHED", "OTHER"].includes(String(value));
 
 const toNumber = (value: unknown, fallback = 0) => {
   const num = typeof value === "number" ? value : Number(value);
@@ -65,6 +79,9 @@ export class AdminController {
         products: db.products,
         productImages: db.productImages,
         inspectionReports: db.inspectionReports,
+        inspections: db.inspections,
+        inspectionImages: db.inspectionImages,
+        inspectionEvents: db.inspectionEvents,
         traceCodes: db.traceCodes,
         tracePages: db.tracePages,
         traceEvents: db.traceEvents,
@@ -161,6 +178,7 @@ export class AdminController {
     const result = await this.databaseService.mutateDb((db) => {
       if (
         db.productImages.some((item) => item.assetId === id) ||
+        db.inspectionImages.some((item) => item.assetId === id) ||
         db.companies.some((item) => item.logoAssetId === id) ||
         db.tracePages.some((item) => parseAssetIdsCsv(item.indexBannerAssetIdsCsv).includes(id))
       ) {
@@ -271,7 +289,7 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCompany(@Param("id") id: string) {
     const result = await this.databaseService.mutateDb((db) => {
-      if (db.products.some((item) => item.companyId === id)) {
+      if (db.products.some((item) => item.companyId === id) || db.inspections.some((item) => item.companyId === id)) {
         return "IN_USE" as const;
       }
 
@@ -443,6 +461,10 @@ export class AdminController {
       db.products.splice(index, 1);
       db.productImages = db.productImages.filter((item) => item.productId !== id);
       db.inspectionReports = db.inspectionReports.filter((item) => item.productId !== id);
+      const inspectionIds = new Set(db.inspections.filter((item) => item.productId === id).map((item) => item.id));
+      db.inspections = db.inspections.filter((item) => item.productId !== id);
+      db.inspectionImages = db.inspectionImages.filter((item) => !inspectionIds.has(item.inspectionId));
+      db.inspectionEvents = db.inspectionEvents.filter((item) => !inspectionIds.has(item.inspectionId));
 
       const traceIds = new Set(db.traceCodes.filter((item) => item.productId === id).map((item) => item.id));
       db.traceCodes = db.traceCodes.filter((item) => item.productId !== id);
@@ -597,6 +619,669 @@ export class AdminController {
 
     if (!ok) {
       throw new HttpException({ message: "Product image not found" }, HttpStatus.NOT_FOUND);
+    }
+  }
+
+
+  @Get("inspections")
+  async listInspections(
+    @Query("sn") querySn?: string,
+    @Query("productId") queryProductId?: string,
+    @Query("companyId") queryCompanyId?: string,
+    @Query("status") queryStatus?: string
+  ) {
+    const sn = String(querySn ?? "").trim();
+    const productId = String(queryProductId ?? "").trim();
+    const companyId = String(queryCompanyId ?? "").trim();
+    const status = String(queryStatus ?? "").trim();
+
+    if (status && !isInspectionStatus(status)) {
+      throw new HttpException(
+        { message: "status must be DRAFT/REVIEWED/PUBLISHED/REVOKED" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const db = await this.databaseService.readDb();
+
+    return {
+      data: db.inspections.filter(
+        (item) =>
+          (!sn || item.sn === sn) &&
+          (!productId || item.productId === productId) &&
+          (!companyId || item.companyId === companyId) &&
+          (!status || item.status === status)
+      ),
+    };
+  }
+
+  @Post("inspections")
+  async createInspection(@Body() body: Record<string, unknown>) {
+    const sn = String(body?.sn ?? "").trim();
+    const productId = String(body?.productId ?? "").trim();
+    const companyId = String(body?.companyId ?? "").trim();
+
+    if (!sn || !productId || !companyId) {
+      throw new HttpException(
+        { message: "sn, productId and companyId are required" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const resultValue = body?.result;
+    if (resultValue !== undefined && !isInspectionResult(resultValue)) {
+      throw new HttpException(
+        { message: "result must be PASS/FAIL/PENDING" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const statusValue = body?.status;
+    if (statusValue !== undefined && !isInspectionStatus(statusValue)) {
+      throw new HttpException(
+        { message: "status must be DRAFT/REVIEWED/PUBLISHED/REVOKED" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const inspectionTimeRaw = body?.inspectionTime;
+    const inspectionTime =
+      inspectionTimeRaw === undefined ? this.databaseService.nowIso() : String(inspectionTimeRaw).trim();
+
+    if (!inspectionTime) {
+      throw new HttpException({ message: "inspectionTime is invalid" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const now = this.databaseService.nowIso();
+
+    const result = await this.databaseService.mutateDb((db) => {
+      if (db.inspections.some((item) => item.sn === sn)) {
+        return { error: "SN_EXISTS" as const };
+      }
+
+      const product = db.products.find((item) => item.id === productId);
+      if (!product) {
+        return { error: "PRODUCT_NOT_FOUND" as const };
+      }
+
+      const company = db.companies.find((item) => item.id === companyId);
+      if (!company) {
+        return { error: "COMPANY_NOT_FOUND" as const };
+      }
+
+      const productNameSnapshotRaw =
+        body?.productNameSnapshot === undefined ? "" : String(body.productNameSnapshot ?? "").trim();
+      const companyNameSnapshotRaw =
+        body?.companyNameSnapshot === undefined ? "" : String(body.companyNameSnapshot ?? "").trim();
+      const conclusionRaw = body?.conclusion === undefined ? "" : String(body.conclusion ?? "");
+
+      const item: Inspection = {
+        id: this.databaseService.newId(),
+        sn,
+        productId,
+        companyId,
+        inspectionTime,
+        result: isInspectionResult(resultValue) ? resultValue : "PENDING",
+        status: isInspectionStatus(statusValue) ? statusValue : "DRAFT",
+        conclusion: conclusionRaw.trim() ? conclusionRaw : undefined,
+        productNameSnapshot: productNameSnapshotRaw || product.name,
+        companyNameSnapshot: companyNameSnapshotRaw || company.name,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      db.inspections.unshift(item);
+      return { data: item };
+    });
+
+    if ("error" in result) {
+      if (result.error === "SN_EXISTS") {
+        throw new HttpException({ message: "sn already exists" }, HttpStatus.CONFLICT);
+      }
+
+      throw new HttpException(
+        {
+          message: result.error === "PRODUCT_NOT_FOUND" ? "productId does not exist" : "companyId does not exist",
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
+  @Put("inspections/:id")
+  async updateInspection(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    const result = await this.databaseService.mutateDb((db) => {
+      const item = db.inspections.find((entry) => entry.id === id);
+      if (!item) {
+        return { error: "NOT_FOUND" as const };
+      }
+
+      if (body?.sn !== undefined) {
+        const sn = String(body.sn ?? "").trim();
+        if (!sn) {
+          return { error: "SN_REQUIRED" as const };
+        }
+
+        if (db.inspections.some((entry) => entry.sn === sn && entry.id !== id)) {
+          return { error: "SN_EXISTS" as const };
+        }
+
+        item.sn = sn;
+      }
+
+      if (body?.productId !== undefined) {
+        const productId = String(body.productId ?? "").trim();
+        if (!productId) {
+          return { error: "PRODUCT_REQUIRED" as const };
+        }
+
+        const product = db.products.find((entry) => entry.id === productId);
+        if (!product) {
+          return { error: "PRODUCT_NOT_FOUND" as const };
+        }
+
+        item.productId = productId;
+        if (body?.productNameSnapshot === undefined) {
+          item.productNameSnapshot = product.name;
+        }
+      }
+
+      if (body?.companyId !== undefined) {
+        const companyId = String(body.companyId ?? "").trim();
+        if (!companyId) {
+          return { error: "COMPANY_REQUIRED" as const };
+        }
+
+        const company = db.companies.find((entry) => entry.id === companyId);
+        if (!company) {
+          return { error: "COMPANY_NOT_FOUND" as const };
+        }
+
+        item.companyId = companyId;
+        if (body?.companyNameSnapshot === undefined) {
+          item.companyNameSnapshot = company.name;
+        }
+      }
+
+      if (body?.inspectionTime !== undefined) {
+        const inspectionTime = String(body.inspectionTime ?? "").trim();
+        if (!inspectionTime) {
+          return { error: "INSPECTION_TIME_REQUIRED" as const };
+        }
+
+        item.inspectionTime = inspectionTime;
+      }
+
+      if (body?.result !== undefined) {
+        const resultValue = body.result;
+        if (!isInspectionResult(resultValue)) {
+          return { error: "INVALID_RESULT" as const };
+        }
+
+        item.result = resultValue;
+      }
+
+      if (body?.status !== undefined) {
+        const statusValue = body.status;
+        if (!isInspectionStatus(statusValue)) {
+          return { error: "INVALID_STATUS" as const };
+        }
+
+        item.status = statusValue;
+      }
+
+      if (body?.conclusion !== undefined) {
+        const conclusion = String(body.conclusion ?? "");
+        item.conclusion = conclusion.trim() ? conclusion : undefined;
+      }
+
+      if (body?.productNameSnapshot !== undefined) {
+        const productNameSnapshot = String(body.productNameSnapshot ?? "").trim();
+        item.productNameSnapshot = productNameSnapshot || undefined;
+      }
+
+      if (body?.companyNameSnapshot !== undefined) {
+        const companyNameSnapshot = String(body.companyNameSnapshot ?? "").trim();
+        item.companyNameSnapshot = companyNameSnapshot || undefined;
+      }
+
+      item.updatedAt = this.databaseService.nowIso();
+      return { data: item };
+    });
+
+    if ("error" in result) {
+      if (result.error === "NOT_FOUND") {
+        throw new HttpException({ message: "Inspection not found" }, HttpStatus.NOT_FOUND);
+      }
+
+      if (result.error === "SN_EXISTS") {
+        throw new HttpException({ message: "sn already exists" }, HttpStatus.CONFLICT);
+      }
+
+      throw new HttpException(
+        {
+          message:
+            result.error === "INVALID_RESULT"
+              ? "result must be PASS/FAIL/PENDING"
+              : result.error === "INVALID_STATUS"
+                ? "status must be DRAFT/REVIEWED/PUBLISHED/REVOKED"
+                : result.error === "PRODUCT_NOT_FOUND"
+                  ? "productId does not exist"
+                  : result.error === "COMPANY_NOT_FOUND"
+                    ? "companyId does not exist"
+                    : result.error === "SN_REQUIRED"
+                      ? "sn is required"
+                      : result.error === "PRODUCT_REQUIRED"
+                        ? "productId is required"
+                        : result.error === "COMPANY_REQUIRED"
+                          ? "companyId is required"
+                          : "inspectionTime is required",
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
+  @Delete("inspections/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteInspection(@Param("id") id: string) {
+    const ok = await this.databaseService.mutateDb((db) => {
+      const index = db.inspections.findIndex((entry) => entry.id === id);
+      if (index < 0) {
+        return false;
+      }
+
+      db.inspections.splice(index, 1);
+      db.inspectionImages = db.inspectionImages.filter((entry) => entry.inspectionId !== id);
+      db.inspectionEvents = db.inspectionEvents.filter((entry) => entry.inspectionId !== id);
+      return true;
+    });
+
+    if (!ok) {
+      throw new HttpException({ message: "Inspection not found" }, HttpStatus.NOT_FOUND);
+    }
+  }
+
+  @Post("inspections/:id/publish")
+  async publishInspection(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    const statusValue = body?.status;
+
+    if (!isInspectionStatus(statusValue)) {
+      throw new HttpException(
+        { message: "status must be DRAFT/REVIEWED/PUBLISHED/REVOKED" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const data = await this.databaseService.mutateDb((db) => {
+      const item = db.inspections.find((entry) => entry.id === id);
+      if (!item) {
+        return null;
+      }
+
+      item.status = statusValue;
+      item.updatedAt = this.databaseService.nowIso();
+      return item;
+    });
+
+    if (!data) {
+      throw new HttpException({ message: "Inspection not found" }, HttpStatus.NOT_FOUND);
+    }
+
+    return { data };
+  }
+
+  @Get("inspection-images")
+  async listInspectionImages(@Query("inspectionId") queryInspectionId?: string) {
+    const inspectionId = String(queryInspectionId ?? "").trim();
+    const db = await this.databaseService.readDb();
+
+    return {
+      data: inspectionId
+        ? db.inspectionImages.filter((item) => item.inspectionId === inspectionId)
+        : db.inspectionImages,
+    };
+  }
+
+  @Post("inspection-images")
+  async createInspectionImage(@Body() body: Record<string, unknown>) {
+    const inspectionId = String(body?.inspectionId ?? "").trim();
+    const assetId = String(body?.assetId ?? "").trim();
+    const scene = String(body?.scene ?? "").trim();
+
+    if (!inspectionId || !assetId || !scene) {
+      throw new HttpException(
+        { message: "inspectionId, assetId and scene are required" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    if (!isInspectionImageScene(scene)) {
+      throw new HttpException({ message: "scene is invalid" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const result = await this.databaseService.mutateDb((db) => {
+      if (!db.inspections.some((item) => item.id === inspectionId)) {
+        return { error: "INSPECTION_NOT_FOUND" as const };
+      }
+
+      if (!db.mediaAssets.some((item) => item.id === assetId)) {
+        return { error: "ASSET_NOT_FOUND" as const };
+      }
+
+      if (
+        db.inspectionImages.some(
+          (item) => item.inspectionId === inspectionId && item.assetId === assetId && item.scene === scene
+        )
+      ) {
+        return { error: "BINDING_EXISTS" as const };
+      }
+
+      const item: InspectionImage = {
+        id: this.databaseService.newId(),
+        inspectionId,
+        assetId,
+        scene,
+        sortOrder: toNumber(body?.sortOrder, 0),
+        createdAt: this.databaseService.nowIso(),
+      };
+
+      db.inspectionImages.push(item);
+      return { data: item };
+    });
+
+    if ("error" in result) {
+      if (result.error === "BINDING_EXISTS") {
+        throw new HttpException({ message: "Inspection image binding already exists" }, HttpStatus.CONFLICT);
+      }
+
+      throw new HttpException(
+        { message: result.error === "INSPECTION_NOT_FOUND" ? "inspectionId does not exist" : "assetId does not exist" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
+  @Put("inspection-images/:id")
+  async updateInspectionImage(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    const result = await this.databaseService.mutateDb((db) => {
+      const item = db.inspectionImages.find((entry) => entry.id === id);
+      if (!item) {
+        return { error: "NOT_FOUND" as const };
+      }
+
+      if (body?.inspectionId !== undefined) {
+        const inspectionId = String(body.inspectionId ?? "").trim();
+        if (!inspectionId) {
+          return { error: "INSPECTION_REQUIRED" as const };
+        }
+
+        if (!db.inspections.some((entry) => entry.id === inspectionId)) {
+          return { error: "INSPECTION_NOT_FOUND" as const };
+        }
+
+        item.inspectionId = inspectionId;
+      }
+
+      if (body?.assetId !== undefined) {
+        const assetId = String(body.assetId ?? "").trim();
+        if (!assetId) {
+          return { error: "ASSET_REQUIRED" as const };
+        }
+
+        if (!db.mediaAssets.some((entry) => entry.id === assetId)) {
+          return { error: "ASSET_NOT_FOUND" as const };
+        }
+
+        item.assetId = assetId;
+      }
+
+      if (body?.scene !== undefined) {
+        const scene = String(body.scene ?? "").trim();
+        if (!isInspectionImageScene(scene)) {
+          return { error: "INVALID_SCENE" as const };
+        }
+
+        item.scene = scene;
+      }
+
+      if (body?.sortOrder !== undefined) {
+        item.sortOrder = toNumber(body.sortOrder, item.sortOrder);
+      }
+
+      if (
+        db.inspectionImages.some(
+          (entry) =>
+            entry.id !== item.id &&
+            entry.inspectionId === item.inspectionId &&
+            entry.assetId === item.assetId &&
+            entry.scene === item.scene
+        )
+      ) {
+        return { error: "BINDING_EXISTS" as const };
+      }
+
+      return { data: item };
+    });
+
+    if ("error" in result) {
+      if (result.error === "NOT_FOUND") {
+        throw new HttpException({ message: "Inspection image not found" }, HttpStatus.NOT_FOUND);
+      }
+
+      if (result.error === "BINDING_EXISTS") {
+        throw new HttpException({ message: "Inspection image binding already exists" }, HttpStatus.CONFLICT);
+      }
+
+      throw new HttpException(
+        {
+          message:
+            result.error === "INSPECTION_NOT_FOUND"
+              ? "inspectionId does not exist"
+              : result.error === "ASSET_NOT_FOUND"
+                ? "assetId does not exist"
+                : result.error === "INSPECTION_REQUIRED"
+                  ? "inspectionId is required"
+                  : result.error === "ASSET_REQUIRED"
+                    ? "assetId is required"
+                    : "scene is invalid",
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
+  @Delete("inspection-images/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteInspectionImage(@Param("id") id: string) {
+    const ok = await this.databaseService.mutateDb((db) => {
+      const index = db.inspectionImages.findIndex((entry) => entry.id === id);
+      if (index < 0) {
+        return false;
+      }
+
+      db.inspectionImages.splice(index, 1);
+      return true;
+    });
+
+    if (!ok) {
+      throw new HttpException({ message: "Inspection image not found" }, HttpStatus.NOT_FOUND);
+    }
+  }
+
+  @Get("inspection-events")
+  async listInspectionEvents(@Query("inspectionId") queryInspectionId?: string) {
+    const inspectionId = String(queryInspectionId ?? "").trim();
+    const db = await this.databaseService.readDb();
+
+    return {
+      data: inspectionId
+        ? db.inspectionEvents.filter((item) => item.inspectionId === inspectionId)
+        : db.inspectionEvents,
+    };
+  }
+
+  @Post("inspection-events")
+  async createInspectionEvent(@Body() body: Record<string, unknown>) {
+    const inspectionId = String(body?.inspectionId ?? "").trim();
+    const title = String(body?.title ?? "").trim();
+
+    if (!inspectionId || !title) {
+      throw new HttpException(
+        { message: "inspectionId and title are required" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const eventTypeValue = body?.eventType;
+    if (eventTypeValue !== undefined && !isInspectionEventType(eventTypeValue)) {
+      throw new HttpException(
+        { message: "eventType is invalid" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const eventTimeRaw = body?.eventTime;
+    const eventTime = eventTimeRaw === undefined ? this.databaseService.nowIso() : String(eventTimeRaw).trim();
+    if (!eventTime) {
+      throw new HttpException({ message: "eventTime is invalid" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const data = await this.databaseService.mutateDb((db) => {
+      if (!db.inspections.some((entry) => entry.id === inspectionId)) {
+        return null;
+      }
+
+      const item: InspectionEvent = {
+        id: this.databaseService.newId(),
+        inspectionId,
+        eventTime,
+        eventType: isInspectionEventType(eventTypeValue) ? eventTypeValue : "OTHER",
+        title,
+        content: body?.content ? String(body.content) : undefined,
+        sortOrder: toNumber(body?.sortOrder, 0),
+        createdAt: this.databaseService.nowIso(),
+      };
+
+      db.inspectionEvents.unshift(item);
+      return item;
+    });
+
+    if (!data) {
+      throw new HttpException({ message: "inspectionId does not exist" }, HttpStatus.BAD_REQUEST);
+    }
+
+    return { data };
+  }
+
+  @Put("inspection-events/:id")
+  async updateInspectionEvent(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    const result = await this.databaseService.mutateDb((db) => {
+      const item = db.inspectionEvents.find((entry) => entry.id === id);
+      if (!item) {
+        return { error: "NOT_FOUND" as const };
+      }
+
+      if (body?.inspectionId !== undefined) {
+        const inspectionId = String(body.inspectionId ?? "").trim();
+        if (!inspectionId) {
+          return { error: "INSPECTION_REQUIRED" as const };
+        }
+
+        if (!db.inspections.some((entry) => entry.id === inspectionId)) {
+          return { error: "INSPECTION_NOT_FOUND" as const };
+        }
+
+        item.inspectionId = inspectionId;
+      }
+
+      if (body?.title !== undefined) {
+        const title = String(body.title ?? "").trim();
+        if (!title) {
+          return { error: "TITLE_REQUIRED" as const };
+        }
+
+        item.title = title;
+      }
+
+      if (body?.content !== undefined) {
+        const content = String(body.content ?? "");
+        item.content = content.trim() ? content : undefined;
+      }
+
+      if (body?.eventType !== undefined) {
+        const eventType = body.eventType;
+        if (!isInspectionEventType(eventType)) {
+          return { error: "INVALID_EVENT_TYPE" as const };
+        }
+
+        item.eventType = eventType;
+      }
+
+      if (body?.eventTime !== undefined) {
+        const eventTime = String(body.eventTime ?? "").trim();
+        if (!eventTime) {
+          return { error: "EVENT_TIME_REQUIRED" as const };
+        }
+
+        item.eventTime = eventTime;
+      }
+
+      if (body?.sortOrder !== undefined) {
+        item.sortOrder = toNumber(body.sortOrder, item.sortOrder);
+      }
+
+      return { data: item };
+    });
+
+    if ("error" in result) {
+      if (result.error === "NOT_FOUND") {
+        throw new HttpException({ message: "Inspection event not found" }, HttpStatus.NOT_FOUND);
+      }
+
+      throw new HttpException(
+        {
+          message:
+            result.error === "INSPECTION_NOT_FOUND"
+              ? "inspectionId does not exist"
+              : result.error === "INSPECTION_REQUIRED"
+                ? "inspectionId is required"
+                : result.error === "TITLE_REQUIRED"
+                  ? "title is required"
+                  : result.error === "EVENT_TIME_REQUIRED"
+                    ? "eventTime is required"
+                    : "eventType is invalid",
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
+  @Delete("inspection-events/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteInspectionEvent(@Param("id") id: string) {
+    const ok = await this.databaseService.mutateDb((db) => {
+      const index = db.inspectionEvents.findIndex((entry) => entry.id === id);
+      if (index < 0) {
+        return false;
+      }
+
+      db.inspectionEvents.splice(index, 1);
+      return true;
+    });
+
+    if (!ok) {
+      throw new HttpException({ message: "Inspection event not found" }, HttpStatus.NOT_FOUND);
     }
   }
 

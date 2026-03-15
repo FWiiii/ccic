@@ -16,7 +16,7 @@ function useSelectOptions(resource: string, labelField = "name") {
 
     return rows.map((row) => {
       const id = String(row.id ?? "");
-      const label = String(row[labelField] ?? row.name ?? row.code ?? id);
+      const label = String(row[labelField] ?? row.name ?? row.code ?? row.sn ?? id);
 
       return {
         label,
@@ -24,6 +24,170 @@ function useSelectOptions(resource: string, labelField = "name") {
       } satisfies FieldOption;
     });
   }, [data, labelField]);
+}
+
+export function InspectionsPage() {
+  const productOptions = useSelectOptions("products");
+  const companyOptions = useSelectOptions("companies");
+
+  const productMap = useMemo(
+    () => new Map(productOptions.map((item) => [item.value, item.label])),
+    [productOptions]
+  );
+  const companyMap = useMemo(
+    () => new Map(companyOptions.map((item) => [item.value, item.label])),
+    [companyOptions]
+  );
+
+  return (
+    <CrudResourcePage
+      title="鉴定单管理（鉴定机构固定：中国检验认证集团奢侈品鉴定中心）"
+      resource="inspections"
+      fields={[
+        { key: "sn", label: "检验码SN", required: true },
+        {
+          key: "productId",
+          label: "商品",
+          type: "select",
+          required: true,
+          options: productOptions,
+          tableRender: (value) => productMap.get(String(value ?? "")) ?? String(value ?? "-"),
+        },
+        {
+          key: "companyId",
+          label: "送检公司",
+          type: "select",
+          required: true,
+          options: companyOptions,
+          tableRender: (value) => companyMap.get(String(value ?? "")) ?? String(value ?? "-"),
+        },
+        { key: "inspectionTime", label: "送检时间(ISO)", required: true },
+        {
+          key: "result",
+          label: "鉴定结果",
+          type: "select",
+          required: true,
+          options: [
+            { label: "PASS", value: "PASS" },
+            { label: "FAIL", value: "FAIL" },
+            { label: "PENDING", value: "PENDING" },
+          ],
+        },
+        {
+          key: "status",
+          label: "发布状态",
+          type: "select",
+          required: true,
+          options: [
+            { label: "DRAFT", value: "DRAFT" },
+            { label: "REVIEWED", value: "REVIEWED" },
+            { label: "PUBLISHED", value: "PUBLISHED" },
+            { label: "REVOKED", value: "REVOKED" },
+          ],
+        },
+        { key: "conclusion", label: "鉴定结论", type: "textarea", hideInTable: true },
+        { key: "productNameSnapshot", label: "商品名称快照", hideInTable: true },
+        { key: "companyNameSnapshot", label: "送检公司快照", hideInTable: true },
+        { key: "updatedAt", label: "更新时间", hideInForm: true },
+      ]}
+    />
+  );
+}
+
+export function InspectionImagesPage() {
+  const inspectionOptions = useSelectOptions("inspections", "sn");
+  const mediaOptions = useSelectOptions("media");
+
+  const inspectionMap = useMemo(
+    () => new Map(inspectionOptions.map((item) => [item.value, item.label])),
+    [inspectionOptions]
+  );
+  const mediaMap = useMemo(
+    () => new Map(mediaOptions.map((item) => [item.value, item.label])),
+    [mediaOptions]
+  );
+
+  return (
+    <CrudResourcePage
+      title="检测图片管理"
+      resource="inspection-images"
+      fields={[
+        {
+          key: "inspectionId",
+          label: "鉴定单(SN)",
+          type: "select",
+          required: true,
+          options: inspectionOptions,
+          tableRender: (value) => inspectionMap.get(String(value ?? "")) ?? String(value ?? "-"),
+        },
+        {
+          key: "assetId",
+          label: "素材",
+          type: "select",
+          required: true,
+          options: mediaOptions,
+          tableRender: (value) => mediaMap.get(String(value ?? "")) ?? String(value ?? "-"),
+        },
+        {
+          key: "scene",
+          label: "图片场景",
+          type: "select",
+          required: true,
+          options: [
+            { label: "HERO", value: "HERO" },
+            { label: "DETAIL", value: "DETAIL" },
+            { label: "CERT", value: "CERT" },
+            { label: "OTHER", value: "OTHER" },
+          ],
+        },
+        { key: "sortOrder", label: "排序", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "createdAt", label: "创建时间", hideInForm: true },
+      ]}
+    />
+  );
+}
+
+export function InspectionEventsPage() {
+  const inspectionOptions = useSelectOptions("inspections", "sn");
+  const inspectionMap = useMemo(
+    () => new Map(inspectionOptions.map((item) => [item.value, item.label])),
+    [inspectionOptions]
+  );
+
+  return (
+    <CrudResourcePage
+      title="检测轨迹管理"
+      resource="inspection-events"
+      fields={[
+        {
+          key: "inspectionId",
+          label: "鉴定单(SN)",
+          type: "select",
+          required: true,
+          options: inspectionOptions,
+          tableRender: (value) => inspectionMap.get(String(value ?? "")) ?? String(value ?? "-"),
+        },
+        {
+          key: "eventType",
+          label: "事件类型",
+          type: "select",
+          options: [
+            { label: "SUBMIT", value: "SUBMIT" },
+            { label: "SAMPLE_RECEIVED", value: "SAMPLE_RECEIVED" },
+            { label: "INSPECTION", value: "INSPECTION" },
+            { label: "CERTIFIED", value: "CERTIFIED" },
+            { label: "PUBLISHED", value: "PUBLISHED" },
+            { label: "OTHER", value: "OTHER" },
+          ],
+        },
+        { key: "title", label: "标题", required: true },
+        { key: "content", label: "内容", type: "textarea", hideInTable: true },
+        { key: "eventTime", label: "事件时间(ISO)" },
+        { key: "sortOrder", label: "排序", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "createdAt", label: "创建时间", hideInForm: true },
+      ]}
+    />
+  );
 }
 
 export function ProductsPage() {
@@ -35,27 +199,27 @@ export function ProductsPage() {
 
   return (
     <CrudResourcePage
-      title="\u5546\u54c1\u7ba1\u7406"
+      title="商品管理"
       resource="products"
       publishResource="products"
       fields={[
-        { key: "name", label: "\u5546\u54c1\u540d\u79f0", required: true },
+        { key: "name", label: "商品名称", required: true },
         {
           key: "companyId",
-          label: "\u6240\u5c5e\u4f01\u4e1a",
+          label: "默认送检公司",
           type: "select",
           required: true,
           options: companyOptions,
           tableRender: (value) => companyMap.get(String(value ?? "")) ?? String(value ?? "-"),
         },
         { key: "sku", label: "SKU" },
-        { key: "brand", label: "\u54c1\u724c" },
-        { key: "model", label: "\u578b\u53f7" },
-        { key: "summary", label: "\u6458\u8981", type: "textarea", hideInTable: true },
-        { key: "productInfoHtml", label: "\u4ea7\u54c1\u8be6\u60c5HTML", type: "textarea", hideInTable: true },
+        { key: "brand", label: "品牌" },
+        { key: "model", label: "型号" },
+        { key: "summary", label: "摘要", type: "textarea", hideInTable: true },
+        { key: "productInfoHtml", label: "商品详情HTML", type: "textarea", hideInTable: true },
         {
           key: "status",
-          label: "\u53d1\u5e03\u72b6\u6001",
+          label: "发布状态",
           type: "select",
           options: [
             { label: "DRAFT", value: "DRAFT" },
@@ -63,7 +227,7 @@ export function ProductsPage() {
             { label: "ARCHIVED", value: "ARCHIVED" },
           ],
         },
-        { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
+        { key: "updatedAt", label: "更新时间", hideInForm: true },
       ]}
     />
   );
@@ -78,25 +242,25 @@ export function CompaniesPage() {
 
   return (
     <CrudResourcePage
-      title="\u4f01\u4e1a\u7ba1\u7406"
+      title="送检公司管理"
       resource="companies"
       publishResource="companies"
       fields={[
-        { key: "name", label: "\u4f01\u4e1a\u540d\u79f0", required: true },
-        { key: "shortName", label: "\u7b80\u79f0" },
-        { key: "phone", label: "\u8054\u7cfb\u7535\u8bdd" },
-        { key: "address", label: "\u5730\u5740" },
-        { key: "descriptionHtml", label: "\u4f01\u4e1a\u4ecb\u7ecdHTML", type: "textarea", hideInTable: true },
+        { key: "name", label: "送检公司名称", required: true },
+        { key: "shortName", label: "简称" },
+        { key: "phone", label: "联系电话" },
+        { key: "address", label: "地址" },
+        { key: "descriptionHtml", label: "公司介绍HTML", type: "textarea", hideInTable: true },
         {
           key: "logoAssetId",
-          label: "Logo\u7d20\u6750",
+          label: "Logo素材",
           type: "select",
           options: mediaOptions,
           tableRender: (value) => mediaMap.get(String(value ?? "")) ?? String(value ?? "-"),
         },
         {
           key: "status",
-          label: "\u53d1\u5e03\u72b6\u6001",
+          label: "发布状态",
           type: "select",
           options: [
             { label: "DRAFT", value: "DRAFT" },
@@ -104,7 +268,7 @@ export function CompaniesPage() {
             { label: "ARCHIVED", value: "ARCHIVED" },
           ],
         },
-        { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
+        { key: "updatedAt", label: "更新时间", hideInForm: true },
       ]}
     />
   );
@@ -113,183 +277,16 @@ export function CompaniesPage() {
 export function MediaPage() {
   return (
     <CrudResourcePage
-      title="\u7d20\u6750\u5e93"
+      title="素材库"
       resource="media"
       fields={[
-        { key: "name", label: "\u540d\u79f0", required: true },
+        { key: "name", label: "名称", required: true },
         { key: "url", label: "URL", required: true },
-        { key: "mimeType", label: "MIME" },
-        { key: "sizeBytes", label: "\u5927\u5c0f(byte)", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "width", label: "\u5bbd\u5ea6", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "height", label: "\u9ad8\u5ea6", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "createdAt", label: "\u521b\u5efa\u65f6\u95f4", hideInForm: true },
-      ]}
-    />
-  );
-}
-
-export function ProductImagesPage() {
-  const productOptions = useSelectOptions("products");
-  const mediaOptions = useSelectOptions("media");
-  const productMap = useMemo(
-    () => new Map(productOptions.map((item) => [item.value, item.label])),
-    [productOptions]
-  );
-  const mediaMap = useMemo(
-    () => new Map(mediaOptions.map((item) => [item.value, item.label])),
-    [mediaOptions]
-  );
-
-  return (
-    <CrudResourcePage
-      title="\u5546\u54c1\u56fe\u7247\u7ed1\u5b9a"
-      resource="product-images"
-      fields={[
-        {
-          key: "productId",
-          label: "\u5546\u54c1",
-          type: "select",
-          required: true,
-          options: productOptions,
-          tableRender: (value) => productMap.get(String(value ?? "")) ?? String(value ?? "-"),
-        },
-        {
-          key: "assetId",
-          label: "\u7d20\u6750",
-          type: "select",
-          required: true,
-          options: mediaOptions,
-          tableRender: (value) => mediaMap.get(String(value ?? "")) ?? String(value ?? "-"),
-        },
-        {
-          key: "scene",
-          label: "\u573a\u666f",
-          type: "select",
-          required: true,
-          options: [
-            { label: "HERO", value: "HERO" },
-            { label: "CAROUSEL", value: "CAROUSEL" },
-            { label: "COMPANY_DETAIL", value: "COMPANY_DETAIL" },
-            { label: "DETAIL", value: "DETAIL" },
-          ],
-        },
-        { key: "sortOrder", label: "\u6392\u5e8f", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "createdAt", label: "\u521b\u5efa\u65f6\u95f4", hideInForm: true },
-      ]}
-    />
-  );
-}
-
-export function TracePagesPage() {
-  return (
-    <CrudResourcePage
-      title="SN\u8ffd\u6eaf\u9875\u9762"
-      resource="trace-pages"
-      fields={[
-        { key: "sn", label: "\u5546\u54c1SN", required: true },
-        {
-          key: "indexBannerAssetIdsCsv",
-          label: "indexBanner\u7d20\u6750ID(CSV)",
-          type: "textarea",
-          required: true,
-          hideInTable: true,
-        },
-        { key: "consignorName", label: "\u59d4\u6258\u5355\u4f4d" },
-        { key: "inspectionDate", label: "\u6838\u9a8c\u65e5\u671f" },
-        { key: "traceContent", label: "\u8ffd\u6eaf\u4fe1\u606f", type: "textarea", hideInTable: true },
-        {
-          key: "status",
-          label: "\u53d1\u5e03\u72b6\u6001",
-          type: "select",
-          options: [
-            { label: "DRAFT", value: "DRAFT" },
-            { label: "PUBLISHED", value: "PUBLISHED" },
-            { label: "ARCHIVED", value: "ARCHIVED" },
-          ],
-        },
-        { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
-      ]}
-    />
-  );
-}
-
-export function TraceCodesPage() {
-  const productOptions = useSelectOptions("products");
-  const productMap = useMemo(
-    () => new Map(productOptions.map((item) => [item.value, item.label])),
-    [productOptions]
-  );
-
-  return (
-    <CrudResourcePage
-      title="\u8ffd\u6eaf\u7801\u7ba1\u7406"
-      resource="trace-codes"
-      fields={[
-        { key: "code", label: "\u8ffd\u6eaf\u7801", required: true },
-        {
-          key: "productId",
-          label: "\u5546\u54c1",
-          type: "select",
-          required: true,
-          options: productOptions,
-          tableRender: (value) => productMap.get(String(value ?? "")) ?? String(value ?? "-"),
-        },
-        {
-          key: "verifyStatus",
-          label: "\u9a8c\u771f\u72b6\u6001",
-          type: "select",
-          options: [
-            { label: "VALID", value: "VALID" },
-            { label: "INVALID", value: "INVALID" },
-            { label: "EXPIRED", value: "EXPIRED" },
-            { label: "REVOKED", value: "REVOKED" },
-          ],
-        },
-        { key: "verifyCount", label: "\u67e5\u8be2\u6b21\u6570", type: "number", hideInForm: true },
-        { key: "expiresAt", label: "\u8fc7\u671f\u65f6\u95f4(ISO)" },
-        { key: "lastVerifiedAt", label: "\u6700\u540e\u67e5\u8be2\u65f6\u95f4", hideInForm: true },
-      ]}
-    />
-  );
-}
-
-export function TraceEventsPage() {
-  const traceCodeOptions = useSelectOptions("trace-codes", "code");
-  const traceMap = useMemo(
-    () => new Map(traceCodeOptions.map((item) => [item.value, item.label])),
-    [traceCodeOptions]
-  );
-
-  return (
-    <CrudResourcePage
-      title="\u8ffd\u6eaf\u4e8b\u4ef6"
-      resource="trace-events"
-      fields={[
-        {
-          key: "traceCodeId",
-          label: "\u8ffd\u6eaf\u7801",
-          type: "select",
-          required: true,
-          options: traceCodeOptions,
-          tableRender: (value) => traceMap.get(String(value ?? "")) ?? String(value ?? "-"),
-        },
-        {
-          key: "eventType",
-          label: "\u7c7b\u578b",
-          type: "select",
-          options: [
-            { label: "SUBMIT", value: "SUBMIT" },
-            { label: "INSPECTION", value: "INSPECTION" },
-            { label: "CERTIFIED", value: "CERTIFIED" },
-            { label: "UPDATED", value: "UPDATED" },
-            { label: "OTHER", value: "OTHER" },
-          ],
-        },
-        { key: "title", label: "\u6807\u9898", required: true },
-        { key: "content", label: "\u5185\u5bb9", type: "textarea", hideInTable: true },
-        { key: "eventTime", label: "\u4e8b\u4ef6\u65f6\u95f4(ISO)" },
-        { key: "sortOrder", label: "\u6392\u5e8f", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "createdAt", label: "\u521b\u5efa\u65f6\u95f4", hideInForm: true },
+        { key: "mimeType", label: "MIME类型" },
+        { key: "sizeBytes", label: "大小(byte)", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "width", label: "宽度", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "height", label: "高度", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "createdAt", label: "创建时间", hideInForm: true },
       ]}
     />
   );

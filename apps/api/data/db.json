@@ -45,16 +45,23 @@
   ],
   "companies": [
     {
+      "id": "afe808d7-03c6-41b6-8dd5-1405ddca4ac2",
+      "name": "向妮体育",
+      "status": "PUBLISHED",
+      "createdAt": "2026-03-14T03:45:47.307Z",
+      "updatedAt": "2026-03-14T03:45:51.171Z"
+    },
+    {
       "id": "company-1",
-      "name": "中国检验认证集团奢侈品鉴定中心",
-      "shortName": "中检奢侈品",
+      "name": "省向体育",
+      "shortName": "省向体育",
       "phone": "010-58619556",
-      "address": "北京市朝阳区示例路100号",
+      "address": " ",
       "descriptionHtml": "<p>这是企业介绍示例文本，可在后台修改并发布。</p>",
       "logoAssetId": "media-company-1",
       "status": "PUBLISHED",
       "createdAt": "2026-03-13T00:00:00.000Z",
-      "updatedAt": "2026-03-13T00:00:00.000Z"
+      "updatedAt": "2026-03-14T03:45:19.503Z"
     }
   ],
   "products": [
@@ -115,14 +122,90 @@
       "updatedAt": "2026-03-13T00:00:00.000Z"
     }
   ],
+  "inspections": [
+    {
+      "id": "inspection-1",
+      "sn": "0000123456",
+      "productId": "product-1",
+      "companyId": "company-1",
+      "inspectionTime": "2026-01-30T10:30:00.000Z",
+      "result": "PASS",
+      "status": "PUBLISHED",
+      "conclusion": "Sample passed authentication checks.",
+      "productNameSnapshot": "LOUIS VUITTON",
+      "companyNameSnapshot": "CCIC Luxury Authentication Center",
+      "createdAt": "2026-03-13T00:00:00.000Z",
+      "updatedAt": "2026-03-14T03:46:09.632Z"
+    }
+  ],
+  "inspectionImages": [
+    {
+      "id": "inspection-image-hero-1",
+      "inspectionId": "inspection-1",
+      "assetId": "media-hero-1",
+      "scene": "HERO",
+      "sortOrder": 0,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "inspection-image-detail-1",
+      "inspectionId": "inspection-1",
+      "assetId": "media-carousel-1",
+      "scene": "DETAIL",
+      "sortOrder": 10,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "inspection-image-cert-1",
+      "inspectionId": "inspection-1",
+      "assetId": "media-company-1",
+      "scene": "CERT",
+      "sortOrder": 20,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
+  "inspectionEvents": [
+    {
+      "id": "inspection-event-1",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T08:00:00.000Z",
+      "eventType": "SAMPLE_RECEIVED",
+      "title": "Sample received",
+      "content": "Consignor submitted the item for inspection.",
+      "sortOrder": 1,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "inspection-event-2",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T09:30:00.000Z",
+      "eventType": "INSPECTION",
+      "title": "Inspection completed",
+      "content": "Inspection steps completed by the lab team.",
+      "sortOrder": 2,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    },
+    {
+      "id": "inspection-event-3",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T10:30:00.000Z",
+      "eventType": "CERTIFIED",
+      "title": "Certification issued",
+      "content": "Result published with PASS status.",
+      "sortOrder": 3,
+      "createdAt": "2026-03-13T00:00:00.000Z"
+    }
+  ],
   "traceCodes": [
     {
       "id": "trace-1",
       "code": "CCIC-DEMO-0001",
       "productId": "product-1",
       "verifyStatus": "VALID",
-      "verifyCount": 0,
-      "createdAt": "2026-03-13T00:00:00.000Z"
+      "verifyCount": 1,
+      "createdAt": "2026-03-13T00:00:00.000Z",
+      "lastVerifiedAt": "2026-03-14T03:05:23.771Z",
+      "firstVerifiedAt": "2026-03-14T03:05:23.771Z"
     }
   ],
   "tracePages": [
@@ -160,6 +243,13 @@
       "createdAt": "2026-03-13T00:00:00.000Z"
     }
   ],
-  "traceVerifyLogs": [],
+  "traceVerifyLogs": [
+    {
+      "id": "fbb6cf57-a0a1-4a1c-b063-d17a15e55b36",
+      "traceCodeId": "trace-1",
+      "verifyAt": "2026-03-14T03:05:23.771Z",
+      "isValid": true
+    }
+  ],
   "auditLogs": []
 }

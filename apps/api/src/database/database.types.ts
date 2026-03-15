@@ -63,6 +63,66 @@ export interface InspectionReport {
   updatedAt: string;
 }
 
+export type InspectionResult = "PASS" | "FAIL" | "PENDING";
+export type InspectionStatus = "DRAFT" | "REVIEWED" | "PUBLISHED" | "REVOKED";
+export type InspectionImageScene = "HERO" | "DETAIL" | "CERT" | "OTHER";
+export type InspectionEventType =
+  | "SUBMIT"
+  | "SAMPLE_RECEIVED"
+  | "INSPECTION"
+  | "CERTIFIED"
+  | "PUBLISHED"
+  | "OTHER";
+
+export interface Inspection {
+  id: string;
+  sn: string;
+  productId: string;
+  companyId: string;
+  inspectionTime: string;
+  result: InspectionResult;
+  status: InspectionStatus;
+  conclusion?: string;
+  productNameSnapshot?: string;
+  companyNameSnapshot?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InspectionImage {
+  id: string;
+  inspectionId: string;
+  assetId: string;
+  scene: InspectionImageScene;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface InspectionEvent {
+  id: string;
+  inspectionId: string;
+  eventTime: string;
+  eventType: InspectionEventType;
+  title: string;
+  content?: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface PublicInspectionAggregateImage extends MediaAsset {
+  scene: InspectionImageScene;
+  sortOrder: number;
+}
+
+export interface PublicInspectionAggregate {
+  inspectionAgencyName: string;
+  inspection: Inspection;
+  product: Product;
+  company: Company;
+  images: PublicInspectionAggregateImage[];
+  events: InspectionEvent[];
+}
+
 export type TraceEventType = "SUBMIT" | "INSPECTION" | "CERTIFIED" | "UPDATED" | "OTHER";
 
 export interface TraceEvent {
@@ -99,6 +159,7 @@ export interface TracePage {
   createdAt: string;
   updatedAt: string;
 }
+
 export interface TracePageAggregate {
   traceCode: TraceCode;
   product: Product;
@@ -159,10 +220,12 @@ export interface Database {
   products: Product[];
   productImages: ProductImage[];
   inspectionReports: InspectionReport[];
+  inspections: Inspection[];
+  inspectionImages: InspectionImage[];
+  inspectionEvents: InspectionEvent[];
   traceCodes: TraceCode[];
   tracePages: TracePage[];
   traceEvents: TraceEvent[];
   traceVerifyLogs: TraceVerifyLog[];
   auditLogs: AuditLog[];
 }
-

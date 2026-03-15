@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   useCreate,
   useCustomMutation,
@@ -190,8 +190,25 @@ export function CrudResourcePage({
           }
 
           if (field.key === "status" && typeof value === "string") {
-            const color = value === "PUBLISHED" ? "green" : value === "DRAFT" ? "orange" : "default";
-            return <Tag color={color}>{value}</Tag>;
+            const statusColorMap: Record<string, string> = {
+              DRAFT: "orange",
+              REVIEWED: "blue",
+              PUBLISHED: "green",
+              REVOKED: "red",
+              ARCHIVED: "default",
+            };
+
+            return <Tag color={statusColorMap[value] ?? "default"}>{value}</Tag>;
+          }
+
+          if (field.key === "result" && typeof value === "string") {
+            const resultColorMap: Record<string, string> = {
+              PASS: "green",
+              FAIL: "red",
+              PENDING: "orange",
+            };
+
+            return <Tag color={resultColorMap[value] ?? "default"}>{value}</Tag>;
           }
 
           return renderCellValue(value);

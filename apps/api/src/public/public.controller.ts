@@ -1,5 +1,10 @@
-import { Controller, Get, HttpException, HttpStatus, Param } from "@nestjs/common";
-import type { MediaAsset, ProductImage, TracePageAggregate } from "../database/database.types";
+import { Controller, Get, HttpException, HttpStatus, Param, Query } from "@nestjs/common";
+import type {
+  MediaAsset,
+  ProductImage,
+  PublicInspectionAggregate,
+  TracePageAggregate,
+} from "../database/database.types";
 import { DatabaseService } from "../database/database.service";
 
 const parseAssetIdsCsv = (value: unknown) =>
@@ -8,9 +13,76 @@ const parseAssetIdsCsv = (value: unknown) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-@Controller("api/public")
+const INSPECTION_AGENCY_NAME = "中国检验认证集团奢侈品鉴定中心";
+
+@Controller(["api/public", "api/v1/public"])
 export class PublicController {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  @Get("inspection")
+  async getInspectionBySn(@Query("sn") rawSn: string) {
+    const sn = String(rawSn ?? "").trim();
+
+    if (!sn) {
+      throw new HttpException({ message: "sn is required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const db = await this.databaseService.readDb();
+    const inspection = db.inspections.find((item) => item.sn === sn && item.status === "PUBLISHED");
+
+    if (!inspection) {
+      throw new HttpException({ message: "Inspection not found" }, HttpStatus.NOT_FOUND);
+    }
+
+    const product = db.products.find((item) => item.id === inspection.productId);
+    const company = db.companies.find((item) => item.id === inspection.companyId);
+
+    if (!product || !company) {
+      throw new HttpException({ message: "Inspection data is incomplete" }, HttpStatus.CONFLICT);
+    }
+
+    const assetById = new Map(db.mediaAssets.map((asset) => [asset.id, asset]));
+
+    const images: PublicInspectionAggregate["images"] = db.inspectionImages
+      .filter((item) => item.inspectionId === inspection.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((item) => {
+        const asset = assetById.get(item.assetId);
+        if (!asset) {
+          return null;
+        }
+
+        return {
+          ...asset,
+          scene: item.scene,
+          sortOrder: item.sortOrder,
+        };
+      })
+      .filter((item): item is PublicInspectionAggregate["images"][number] => Boolean(item));
+
+    const events = db.inspectionEvents
+      .filter((item) => item.inspectionId === inspection.id)
+      .sort((a, b) =>
+        a.eventTime === b.eventTime ? a.sortOrder - b.sortOrder : a.eventTime > b.eventTime ? -1 : 1
+      );
+
+    const data: PublicInspectionAggregate = {
+      inspectionAgencyName: INSPECTION_AGENCY_NAME,
+      inspection,
+      product: {
+        ...product,
+        name: inspection.productNameSnapshot?.trim() || product.name,
+      },
+      company: {
+        ...company,
+        name: inspection.companyNameSnapshot?.trim() || company.name,
+      },
+      images,
+      events,
+    };
+
+    return { data };
+  }
 
   @Get("traces/:code")
   async getTrace(@Param("code") rawCode: string) {
