@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import bannerImage from "../assets/static/upload/image/20260130/1769762711981592.jpg";
 import { normalizeImageUrls } from "../utils/normalizeImageUrls";
 
@@ -14,10 +14,20 @@ export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
   }, [images]);
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const previousImagesRef = useRef<string[] | null>(null);
 
   useEffect(() => {
-    setActiveIndex(0);
-  }, [normalizedImages.join("|")]);
+    const previousImages = previousImagesRef.current;
+    const hasChanged =
+      !previousImages ||
+      previousImages.length !== normalizedImages.length ||
+      previousImages.some((item, index) => item !== normalizedImages[index]);
+
+    if (hasChanged) {
+      setActiveIndex(0);
+      previousImagesRef.current = normalizedImages;
+    }
+  }, [normalizedImages]);
 
   const currentImage = normalizedImages[Math.min(activeIndex, normalizedImages.length - 1)] ?? bannerImage;
 
