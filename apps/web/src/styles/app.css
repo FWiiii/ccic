@@ -14,6 +14,12 @@ body,
   height: 100%;
 }
 
+.app-root .contentDivOne {
+  overflow-x: hidden;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
 .fixed-tab {
   position: sticky;
   z-index: 15;
@@ -387,4 +393,21 @@ body,
   color: #646566;
   font-size: 12px;
   line-height: 1.7;
+}
+
+/* Keep per-tab natural height (active tab only participates in layout) */
+.tabs.app-tabs-lock {
+  width: 100%;
+}
+
+.tabs.app-tabs-lock > .tab.app-tab-panel {
+  width: 100%;
+}
+
+.tabs.app-tabs-lock > .tab.app-tab-panel.is-inactive {
+  display: none !important;
+}
+
+.tabs.app-tabs-lock > .tab.app-tab-panel.is-active {
+  display: block !important;
 }
