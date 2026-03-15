@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import bannerImage from "../assets/static/upload/image/20260130/1769762711981592.jpg";
+import { normalizeImageUrls } from "../utils/normalizeImageUrls";
 
 interface ProductCarouselProps {
   images?: string[];
@@ -8,7 +9,7 @@ interface ProductCarouselProps {
 
 export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
   const normalizedImages = useMemo(() => {
-    const list = (images ?? []).map((item) => String(item ?? "").trim()).filter(Boolean);
+    const list = normalizeImageUrls(images);
     return list.length > 0 ? list : [bannerImage];
   }, [images]);
 

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { PublicInspectionData } from "../api/publicInspection";
 import type { TraceStatus } from "../components/tabs/TraceInfoTab";
+import { normalizeImageUrls } from "../utils/normalizeImageUrls";
 
 const isTraceStatus = (value: unknown): value is TraceStatus =>
   value === "SUBMITTED" || value === "INSPECTING" || value === "COMPLETED";
@@ -46,31 +47,22 @@ export function useInspectionDisplayModel({
   inspectionAgencyFallback,
 }: UseInspectionDisplayModelOptions) {
   const bannerImages = useMemo(() => {
-    const displayImages = (inspectionData?.display?.indexBannerImages ?? [])
-      .map((item) => String(item?.url ?? "").trim())
-      .filter(Boolean);
-    const fallbackImages = (inspectionData?.images ?? [])
-      .map((item) => String(item?.url ?? "").trim())
-      .filter(Boolean);
+    const displayImages = normalizeImageUrls(
+      (inspectionData?.display?.indexBannerImages ?? []).map((item) => item?.url)
+    );
+    const fallbackImages = normalizeImageUrls((inspectionData?.images ?? []).map((item) => item?.url));
 
-    const merged = displayImages.length > 0 ? displayImages : fallbackImages;
-    return Array.from(new Set(merged));
+    return displayImages.length > 0 ? displayImages : fallbackImages;
   }, [inspectionData]);
 
   const traceSampleImages = useMemo(() => {
-    const inspectionImages = (inspectionData?.images ?? [])
-      .map((item) => String(item?.url ?? "").trim())
-      .filter(Boolean);
+    const inspectionImages = normalizeImageUrls((inspectionData?.images ?? []).map((item) => item?.url));
 
     if (inspectionImages.length > 0) {
-      return Array.from(new Set(inspectionImages));
+      return inspectionImages;
     }
 
-    const displayImages = (inspectionData?.display?.indexBannerImages ?? [])
-      .map((item) => String(item?.url ?? "").trim())
-      .filter(Boolean);
-
-    return Array.from(new Set(displayImages));
+    return normalizeImageUrls((inspectionData?.display?.indexBannerImages ?? []).map((item) => item?.url));
   }, [inspectionData]);
 
   const productName =
