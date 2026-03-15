@@ -1,0 +1,131 @@
+.trace-notfound-page {
+  background-color: #fff;
+  color: #3d4145;
+  font-family: "Helvetica Neue", Helvetica, sans-serif;
+  line-height: unset;
+}
+
+.trace-notfound-page .page,
+.trace-notfound-page .page.page-current {
+  background: #fff;
+}
+
+.trace-notfound-page .bar {
+  height: 65px;
+  padding-right: 0;
+  padding-left: 0;
+  background-color: transparent;
+}
+
+.trace-notfound-page .bar:after {
+  display: none;
+}
+
+.trace-notfound-page .content {
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.trace-notfound-page .contentDivOne {
+  background-color: #fff !important;
+  top: 65px !important;
+}
+
+.trace-notfound-page .content .title {
+  position: static;
+  display: block;
+  width: auto;
+  margin: 0;
+  line-height: normal;
+  white-space: normal;
+  color: #1557f1;
+  border-bottom: 1px solid #1557f1;
+  padding: 1rem 0 0.8rem;
+  font-weight: 600;
+  letter-spacing: 1.2;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.trace-notfound-page .ds-i {
+  display: inline-block;
+}
+
+.trace-notfound-page .ds-b {
+  display: block;
+}
+
+.trace-notfound-page .ts {
+  padding: 1rem 0.9rem 0.9rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.trace-notfound-page .err-t {
+  padding-bottom: 0.5rem;
+}
+
+.trace-notfound-page .dh {
+  color: #0090ff;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.trace-notfound-page .zt {
+  display: none;
+  padding: 0 0.9rem 0.9rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.trace-notfound-page .not {
+  display: none;
+  padding: 0 0.9rem 0.9rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.trace-notfound-page .bottom {
+  padding: 0 0.9rem 1.2rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.trace-notfound-page .err {
+  color: #f00;
+}
+
+.trace-notfound-page .tit {
+  height: 65px;
+  background-image: url("../assets/template/mu/static/images/top1.jpg?v=1");
+  background-repeat: round;
+  background-size: cover;
+}
+
+.trace-notfound-page .auth-qrcode-frame {
+  text-align: center;
+}
+
+.trace-notfound-page .auth-qrcode-img {
+  width: 4rem;
+  display: block;
+  margin: 0 auto;
+}
+
+.trace-notfound-page .auth-qrcode-des {
+  font-size: 0.45rem;
+  color: #333;
+  display: block;
+}
+
+@media screen and (min-width: 640px) {
+  .trace-notfound-page .page {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .trace-notfound-page .tit {
+    background-repeat: no-repeat;
+    background-position: 0px;
+  }
+}

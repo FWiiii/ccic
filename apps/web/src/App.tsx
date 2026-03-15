@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchInspectionBySn, type PublicInspectionData } from "./api/publicInspection";
+import { fetchInspectionBySn, PublicInspectionRequestError, type PublicInspectionData } from "./api/publicInspection";
 import { HeroImage } from "./components/HeroImage";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { PageFooter } from "./components/PageFooter";
@@ -9,6 +9,9 @@ import { TopTabs, type TabKey } from "./components/TopTabs";
 import { CompanyInfoTab } from "./components/tabs/CompanyInfoTab";
 import { ProductInfoTab } from "./components/tabs/ProductInfoTab";
 import { TraceInfoTab, type TraceStatus } from "./components/tabs/TraceInfoTab";
+import { SearchPage } from "./pages/SearchPage";
+import { FeedbackPage } from "./pages/FeedbackPage";
+import { TraceNotFoundPage } from "./pages/TraceNotFoundPage";
 
 const INSPECTION_AGENCY_FALLBACK =
   "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
@@ -17,6 +20,12 @@ const readSnFromUrl = () => {
   const params = new URLSearchParams(window.location.search);
   return params.get("sn")?.trim() ?? "";
 };
+
+const readPathnameFromUrl = () => window.location.pathname;
+
+const isSearchPath = (pathname: string) => pathname === "/search" || pathname.startsWith("/search/");
+
+const isFeedbackPath = (pathname: string) => pathname === "/feedback" || pathname.startsWith("/feedback/");
 
 const isTraceStatus = (value: unknown): value is TraceStatus =>
   value === "SUBMITTED" || value === "INSPECTING" || value === "COMPLETED";
@@ -56,21 +65,38 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("taba");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [querySn, setQuerySn] = useState(() => readSnFromUrl());
+  const [pathname, setPathname] = useState(() => readPathnameFromUrl());
   const [inspectionData, setInspectionData] = useState<PublicInspectionData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [showTraceNotFoundPage, setShowTraceNotFoundPage] = useState(false);
+
+  const isSearchPage = isSearchPath(pathname);
+  const isFeedbackPage = isFeedbackPath(pathname);
 
   useEffect(() => {
-    const onPopState = () => setQuerySn(readSnFromUrl());
+    const onPopState = () => {
+      setQuerySn(readSnFromUrl());
+      setPathname(readPathnameFromUrl());
+    };
+
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
   useEffect(() => {
+    if (isSearchPage || isFeedbackPage) {
+      setIsLoading(false);
+      setErrorMessage("");
+      setShowTraceNotFoundPage(false);
+      return;
+    }
+
     const sn = querySn.trim();
 
     if (!sn) {
       setInspectionData(null);
+      setShowTraceNotFoundPage(false);
       setErrorMessage("\u94fe\u63a5\u7f3a\u5c11 sn \u53c2\u6570\uff0c\u8bf7\u68c0\u67e5\u4e8c\u7ef4\u7801\u5730\u5740\u3002");
       setIsLoading(false);
       return;
@@ -80,13 +106,28 @@ export default function App() {
 
     setIsLoading(true);
     setErrorMessage("");
+    setShowTraceNotFoundPage(false);
 
     fetchInspectionBySn(sn, abortController.signal)
       .then((data) => {
         setInspectionData(data);
+        setShowTraceNotFoundPage(false);
+        setErrorMessage("");
       })
       .catch((error) => {
         if (abortController.signal.aborted) {
+          return;
+        }
+
+        setInspectionData(null);
+
+        const isInspectionNotFound =
+          (error instanceof PublicInspectionRequestError && error.status === 404) ||
+          (error instanceof Error && /inspection not found/i.test(error.message));
+
+        if (isInspectionNotFound) {
+          setShowTraceNotFoundPage(true);
+          setErrorMessage("");
           return;
         }
 
@@ -94,7 +135,7 @@ export default function App() {
           error instanceof Error && error.message
             ? error.message
             : "\u67e5\u8be2\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
-        setInspectionData(null);
+        setShowTraceNotFoundPage(false);
         setErrorMessage(message);
       })
       .finally(() => {
@@ -104,7 +145,7 @@ export default function App() {
       });
 
     return () => abortController.abort();
-  }, [querySn]);
+  }, [querySn, isSearchPage, isFeedbackPage]);
 
   const bannerImages = useMemo(() => {
     const displayImages = (inspectionData?.display?.indexBannerImages ?? [])
@@ -157,6 +198,18 @@ export default function App() {
 
     return inferTraceStatusFromInspection(String(inspectionData?.inspection?.status ?? ""));
   }, [inspectionData]);
+
+  if (isSearchPage) {
+    return <SearchPage />;
+  }
+
+  if (isFeedbackPage) {
+    return <FeedbackPage />;
+  }
+
+  if (showTraceNotFoundPage) {
+    return <TraceNotFoundPage traceCode={querySn} serviceProvider={INSPECTION_AGENCY_FALLBACK} />;
+  }
 
   return (
     <div className="page-group app-root">

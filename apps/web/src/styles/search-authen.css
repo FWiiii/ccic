@@ -1,0 +1,156 @@
+.c-w100p {
+  width: 100%;
+}
+
+.c-mrg-0 {
+  margin: 0;
+}
+
+.c-none {
+  display: none;
+}
+
+.c-block {
+  display: block;
+}
+
+.authen-comp-logo {
+  width: 7.5rem;
+  display: block;
+  margin: 16px auto;
+}
+
+.authen-content-frame {
+  width: 15rem;
+  margin: 0 auto;
+}
+
+.auth-search-txt,
+.auth-search-btn {
+  height: 36px;
+  line-height: 36px;
+}
+
+.auth-search-item {
+  font-size: 0;
+}
+
+.auth-search-txt {
+  font-size: 0.6rem;
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+  border: 1px solid #2874b9;
+  width: 77%;
+  display: block;
+  float: left;
+  outline: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+  border-top-right-radius: 0;
+  -webkit-border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  -webkit-border-bottom-right-radius: 0;
+  border-right: none;
+  line-height: 0.6rem;
+  height: 1.8rem;
+  padding: 0.6rem 0 0.6rem 0.6rem;
+}
+
+.auth-search-btn {
+  border: none;
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  width: 23%;
+  background-color: #015caf;
+  color: #fff;
+  font-size: 0.6rem;
+  margin-left: -1px;
+  height: 1.8rem;
+  line-height: 1.8rem;
+  -webkit-appearance: none;
+  border-top-left-radius: 0;
+  -webkit-border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  -webkit-border-bottom-left-radius: 0;
+}
+
+.auth-tips {
+  font-size: 0.6rem;
+  line-height: 1rem;
+  color: #333;
+}
+
+.auth-msg-item {
+  border-bottom: 1px solid #333;
+}
+
+.auth-search-result {
+  color: #fb6100;
+  font-size: 0.8rem;
+  text-align: center;
+  margin: 1rem 0 0;
+}
+
+.auth-result-frame {
+  position: relative;
+  margin: 0.5rem 0;
+}
+
+.auth-result-fail,
+.auth-result-warn {
+  position: absolute;
+  top: 0.2rem;
+  left: 3rem;
+  font-size: 0.65rem;
+  color: #fff;
+  padding-right: 1.5rem;
+}
+
+.auth-result-ok {
+  position: absolute;
+  top: 0.45rem;
+  left: 4.5rem;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.auth-info-item {
+  font-size: 0.72rem;
+  margin-top: 1rem;
+  color: #000;
+}
+
+.auth-info-item p {
+  margin: 0.2rem 0;
+}
+
+.auth-qrcode-frame {
+  text-align: center;
+}
+
+.auth-qrcode-img {
+  width: 4rem;
+  display: block;
+  margin: 0 auto;
+}
+
+.auth-qrcode-des {
+  font-size: 0.45rem;
+  color: #333;
+  display: block;
+}
+
+.auth-contact-item {
+  font-size: 0.65rem;
+  color: #333;
+  text-align: center;
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.auth-contact-phone {
+  color: #01458e;
+}

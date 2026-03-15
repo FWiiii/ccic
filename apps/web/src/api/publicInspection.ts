@@ -47,6 +47,15 @@ interface PublicInspectionResponse {
   data: PublicInspectionData;
   message?: string;
 }
+export class PublicInspectionRequestError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "PublicInspectionRequestError";
+    this.status = status;
+  }
+}
 
 const buildInspectionRequestUrl = (sn: string) => {
   const apiBase = String(import.meta.env.VITE_API_BASE_URL ?? "").trim().replace(/\/$/, "");
@@ -64,7 +73,7 @@ export async function fetchInspectionBySn(sn: string, signal?: AbortSignal): Pro
         ? payload.message
         : `\u67e5\u8be2\u5931\u8d25\uff08HTTP ${response.status}\uff09`;
 
-    throw new Error(message);
+    throw new PublicInspectionRequestError(message, response.status);
   }
 
   if (!payload.data) {
@@ -73,3 +82,4 @@ export async function fetchInspectionBySn(sn: string, signal?: AbortSignal): Pro
 
   return payload.data;
 }
+
