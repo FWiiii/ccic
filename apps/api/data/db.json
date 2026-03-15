@@ -154,11 +154,11 @@
       "productId": "product-1",
       "companyId": "company-1",
       "inspectionTime": "2026-01-30T10:30:00.000Z",
-      "result": "FAIL",
+      "result": "PENDING",
       "status": "PUBLISHED",
       "conclusion": "经鉴定：通过。",
       "createdAt": "2026-03-13T00:00:00.000Z",
-      "updatedAt": "2026-03-15T07:21:21.049Z"
+      "updatedAt": "2026-03-15T10:39:23.413Z"
     }
   ],
   "inspectionImages": [
@@ -189,6 +189,33 @@
   ],
   "inspectionEvents": [
     {
+      "id": "2ef6c644-e69b-4e68-8a52-b04a4fae94d7",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T10:32:00.000Z",
+      "eventType": "CERTIFIED",
+      "title": "已检测",
+      "sortOrder": 2,
+      "createdAt": "2026-03-15T10:39:23.579Z"
+    },
+    {
+      "id": "ae9f6b82-078b-475b-9357-c7b5aae843ca",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T10:31:00.000Z",
+      "eventType": "INSPECTION",
+      "title": "检测中",
+      "sortOrder": 1,
+      "createdAt": "2026-03-15T10:39:23.564Z"
+    },
+    {
+      "id": "6d1da157-9ab9-40d5-94ac-b4d5c2e4afeb",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T10:30:00.000Z",
+      "eventType": "SUBMIT",
+      "title": "已送检",
+      "sortOrder": 0,
+      "createdAt": "2026-03-15T10:39:23.549Z"
+    },
+    {
       "id": "6c8be022-6582-4a85-a4b6-21f35d433b85",
       "inspectionId": "inspection-1",
       "eventTime": "2026-01-30T10:32:00.000Z",
@@ -214,26 +241,6 @@
       "title": "已送检",
       "sortOrder": 0,
       "createdAt": "2026-03-15T07:21:21.181Z"
-    },
-    {
-      "id": "inspection-event-1",
-      "inspectionId": "inspection-1",
-      "eventTime": "2026-01-30T08:00:00.000Z",
-      "eventType": "SAMPLE_RECEIVED",
-      "title": "已送检",
-      "content": "样品已接收。",
-      "sortOrder": 1,
-      "createdAt": "2026-03-13T00:00:00.000Z"
-    },
-    {
-      "id": "inspection-event-3",
-      "inspectionId": "inspection-1",
-      "eventTime": "2026-01-30T10:30:00.000Z",
-      "eventType": "CERTIFIED",
-      "title": "已检测",
-      "content": "检测完成并发布。",
-      "sortOrder": 3,
-      "createdAt": "2026-03-13T00:00:00.000Z"
     }
   ],
   "traceCodes": [

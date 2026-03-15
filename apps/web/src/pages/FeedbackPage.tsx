@@ -1,4 +1,4 @@
-锘縤mport { FormEvent, useState } from "react";
+import { FormEvent, useState } from "react";
 
 const goBack = () => {
   if (window.history.length > 1) {
@@ -30,10 +30,10 @@ export function FeedbackPage() {
           <button className="button button-link button-nav pull-left complaintHeaderIn" type="button" onClick={goBack}>
             <div>
               <span className="icon icon-left complaints-a complaintA"></span>
-              <span className="complaints-span">{"\u8fd4\u56de"}</span>
+              <span className="complaints-span">{"返回"}</span>
             </div>
           </button>
-          <h1 className="title complaints-h1">{"\u6d88\u8d39\u53cd\u9988"}</h1>
+          <h1 className="title complaints-h1">{"消费反馈"}</h1>
         </header>
 
         <form className="content complaintContent" onSubmit={handleSubmit}>
@@ -48,7 +48,7 @@ export function FeedbackPage() {
                         required
                         className="complaintItemInput"
                         name="contacts"
-                        placeholder={"\u53cd\u9988\u4eba\u59d3\u540d"}
+                        placeholder={"反馈人姓名"}
                         id="co-name"
                         value={contacts}
                         onChange={(event) => setContacts(event.target.value)}
@@ -141,3 +141,6 @@ export function FeedbackPage() {
     </div>
   );
 }
+
+
+

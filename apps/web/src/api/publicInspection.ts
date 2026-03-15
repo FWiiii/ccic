@@ -71,13 +71,13 @@ export async function fetchInspectionBySn(sn: string, signal?: AbortSignal): Pro
     const message =
       typeof payload.message === "string" && payload.message
         ? payload.message
-        : `\u67e5\u8be2\u5931\u8d25\uff08HTTP ${response.status}\uff09`;
+        : `查询失败(HTTP ${response.status})`;
 
     throw new PublicInspectionRequestError(message, response.status);
   }
 
   if (!payload.data) {
-    throw new Error("\u63a5\u53e3\u672a\u8fd4\u56de\u9274\u5b9a\u6570\u636e");
+    throw new Error("接口未返回鉴定数据");
   }
 
   return payload.data;
