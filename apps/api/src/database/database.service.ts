@@ -791,7 +791,6 @@ export class DatabaseService implements OnModuleDestroy {
     }
 
     await this.writeDbToPostgres(db);
-    await this.writeJsonDb(db);
   }
 
   async mutateDb<T>(mutator: (db: Database) => T): Promise<T> {
@@ -809,4 +808,5 @@ export class DatabaseService implements OnModuleDestroy {
     return randomUUID();
   }
 }
+
 
