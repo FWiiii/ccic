@@ -28,7 +28,7 @@ export class AuthController {
       throw new HttpException({ message: "Invalid credentials" }, HttpStatus.UNAUTHORIZED);
     }
 
-    const token = this.tokenService.createToken(user.id);
+    const token = await this.tokenService.createToken(user.id);
 
     const data: AdminLoginResponse = {
       token,

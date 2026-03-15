@@ -1,21 +1,19 @@
-import { randomUUID } from "node:crypto";
 import { Injectable } from "@nestjs/common";
+import { DatabaseService } from "../database/database.service";
 
 @Injectable()
 export class TokenService {
-  private readonly tokens = new Map<string, string>();
+  constructor(private readonly databaseService: DatabaseService) {}
 
-  createToken(userId: string) {
-    const token = `ccic_${randomUUID()}`;
-    this.tokens.set(token, userId);
-    return token;
+  async createToken(userId: string) {
+    return this.databaseService.createAdminSession(userId);
   }
 
-  getUserId(token: string) {
-    return this.tokens.get(token);
+  async getUserId(token: string) {
+    return this.databaseService.getAdminSessionUserId(token);
   }
 
-  revokeToken(token: string) {
-    this.tokens.delete(token);
+  async revokeToken(token: string) {
+    await this.databaseService.revokeAdminSession(token);
   }
 }

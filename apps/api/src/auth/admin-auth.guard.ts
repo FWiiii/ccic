@@ -20,7 +20,7 @@ export class AdminAuthGuard implements CanActivate {
     const req = context.switchToHttp().getRequest<Request>();
     const auth = req.header("authorization");
     const token = auth?.startsWith("Bearer ") ? auth.slice(7) : "";
-    const userId = this.tokenService.getUserId(token);
+    const userId = await this.tokenService.getUserId(token);
 
     if (!userId) {
       throw new HttpException({ message: "Unauthorized" }, HttpStatus.UNAUTHORIZED);

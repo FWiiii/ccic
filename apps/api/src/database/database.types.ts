@@ -211,6 +211,16 @@ export interface AdminUser {
   updatedAt: string;
 }
 
+export interface AdminSession {
+  id: string;
+  token: string;
+  userId: string;
+  expiresAt?: string;
+  lastUsedAt?: string;
+  revokedAt?: string;
+  createdAt: string;
+}
+
 export interface TraceVerifyLog {
   id: string;
   traceCodeId: string;
@@ -232,6 +242,7 @@ export interface AuditLog {
 
 export interface Database {
   adminUsers: AdminUser[];
+  adminSessions: AdminSession[];
   mediaAssets: MediaAsset[];
   companies: Company[];
   products: Product[];
@@ -246,4 +257,3 @@ export interface Database {
   traceVerifyLogs: TraceVerifyLog[];
   auditLogs: AuditLog[];
 }
-

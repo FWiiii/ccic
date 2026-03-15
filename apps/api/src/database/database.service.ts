@@ -11,6 +11,7 @@ type DbRow = Record<string, unknown>;
 
 const EMPTY_DB: Database = {
   adminUsers: [],
+  adminSessions: [],
   mediaAssets: [],
   companies: [],
   products: [],
@@ -123,6 +124,7 @@ export class DatabaseService implements OnModuleDestroy {
   private readonly logger = new Logger(DatabaseService.name);
   private readonly postgresUrl = asString(process.env.DATABASE_URL).trim();
   private readonly pgPool = this.postgresUrl ? new Pool({ connectionString: this.postgresUrl }) : null;
+  private readonly adminSessionTtlHours = asNumber(process.env.ADMIN_SESSION_TTL_HOURS, 24 * 30);
 
   async onModuleDestroy() {
     if (!this.pgPool) {
@@ -147,6 +149,7 @@ export class DatabaseService implements OnModuleDestroy {
       ...EMPTY_DB,
       ...parsed,
       adminUsers: parsed.adminUsers ?? [],
+      adminSessions: parsed.adminSessions ?? [],
       mediaAssets: parsed.mediaAssets ?? [],
       companies: parsed.companies ?? [],
       products: parsed.products ?? [],
@@ -195,6 +198,7 @@ export class DatabaseService implements OnModuleDestroy {
 
     const [
       adminUsersResult,
+      adminSessionsResult,
       mediaAssetsResult,
       companiesResult,
       productsResult,
@@ -212,6 +216,9 @@ export class DatabaseService implements OnModuleDestroy {
     ] = await Promise.all([
       this.pgPool.query<DbRow>(
         "SELECT id, username, password, display_name, role, status, created_at, updated_at FROM admin_users"
+      ),
+      this.pgPool.query<DbRow>(
+        "SELECT id, token, user_id, expires_at, last_used_at, revoked_at, created_at FROM admin_sessions"
       ),
       this.pgPool.query<DbRow>(
         "SELECT id, url, name, mime_type, size_bytes, width, height, created_at FROM media_assets"
@@ -290,6 +297,15 @@ export class DatabaseService implements OnModuleDestroy {
         status: asString(row.status) as "ACTIVE" | "DISABLED",
         createdAt: asIsoString(row.created_at, now),
         updatedAt: asIsoString(row.updated_at, now),
+      })),
+      adminSessions: adminSessionsResult.rows.map((row: DbRow) => ({
+        id: asString(row.id),
+        token: asString(row.token),
+        userId: asString(row.user_id),
+        expiresAt: asOptionalIsoString(row.expires_at),
+        lastUsedAt: asOptionalIsoString(row.last_used_at),
+        revokedAt: asOptionalIsoString(row.revoked_at),
+        createdAt: asIsoString(row.created_at, now),
       })),
       mediaAssets: mediaAssetsResult.rows.map((row: DbRow) => ({
         id: asString(row.id),
@@ -487,6 +503,25 @@ export class DatabaseService implements OnModuleDestroy {
               item.status,
               item.createdAt,
               item.updatedAt,
+            ]
+          );
+        }
+
+        for (const item of db.adminSessions) {
+          await run(
+            `
+              INSERT INTO admin_sessions (
+                id, token, user_id, expires_at, last_used_at, revoked_at, created_at
+              ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+            `,
+            [
+              item.id,
+              item.token,
+              item.userId,
+              item.expiresAt ?? null,
+              item.lastUsedAt ?? null,
+              item.revokedAt ?? null,
+              item.createdAt,
             ]
           );
         }
@@ -771,6 +806,158 @@ export class DatabaseService implements OnModuleDestroy {
     });
   }
 
+  private getSessionExpiresAt(): string | undefined {
+    if (!Number.isFinite(this.adminSessionTtlHours) || this.adminSessionTtlHours <= 0) {
+      return undefined;
+    }
+
+    return new Date(Date.now() + this.adminSessionTtlHours * 60 * 60 * 1000).toISOString();
+  }
+
+  private isSessionExpired(expiresAt?: string, referenceTimeIso = this.nowIso()): boolean {
+    if (!expiresAt) {
+      return false;
+    }
+
+    const expiresAtMs = new Date(expiresAt).getTime();
+    const referenceMs = new Date(referenceTimeIso).getTime();
+
+    if (Number.isNaN(expiresAtMs) || Number.isNaN(referenceMs)) {
+      return false;
+    }
+
+    return expiresAtMs <= referenceMs;
+  }
+
+  async createAdminSession(userId: string): Promise<string> {
+    const normalizedUserId = asString(userId).trim();
+
+    if (!normalizedUserId) {
+      throw new Error("userId is required");
+    }
+
+    const token = `ccic_${randomUUID()}`;
+    const now = this.nowIso();
+    const expiresAt = this.getSessionExpiresAt();
+
+    if (!this.pgPool) {
+      await this.mutateDb((db) => {
+        db.adminSessions.unshift({
+          id: this.newId(),
+          token,
+          userId: normalizedUserId,
+          expiresAt,
+          lastUsedAt: now,
+          createdAt: now,
+        });
+      });
+
+      return token;
+    }
+
+    await this.pgPool.query(
+      `
+        INSERT INTO admin_sessions (
+          id, token, user_id, expires_at, last_used_at, created_at
+        ) VALUES ($1,$2,$3,$4,$5,$6)
+      `,
+      [this.newId(), token, normalizedUserId, expiresAt ?? null, now, now]
+    );
+
+    return token;
+  }
+
+  async getAdminSessionUserId(token: string): Promise<string | undefined> {
+    const normalizedToken = asString(token).trim();
+
+    if (!normalizedToken) {
+      return undefined;
+    }
+
+    const now = this.nowIso();
+
+    if (!this.pgPool) {
+      let userId: string | undefined;
+
+      await this.mutateDb((db) => {
+        const session = db.adminSessions.find((item) => item.token === normalizedToken);
+
+        if (!session || session.revokedAt) {
+          return;
+        }
+
+        if (this.isSessionExpired(session.expiresAt, now)) {
+          session.revokedAt = now;
+          return;
+        }
+
+        session.lastUsedAt = now;
+        userId = session.userId;
+      });
+
+      return userId;
+    }
+
+    await this.pgPool.query(
+      `
+        UPDATE admin_sessions
+        SET revoked_at = COALESCE(revoked_at, $2::timestamptz)
+        WHERE token = $1
+          AND revoked_at IS NULL
+          AND expires_at IS NOT NULL
+          AND expires_at <= $2::timestamptz
+      `,
+      [normalizedToken, now]
+    );
+
+    const result = await this.pgPool.query<DbRow>(
+      `
+        UPDATE admin_sessions
+        SET last_used_at = $2::timestamptz
+        WHERE token = $1
+          AND revoked_at IS NULL
+          AND (expires_at IS NULL OR expires_at > $2::timestamptz)
+        RETURNING user_id
+      `,
+      [normalizedToken, now]
+    );
+
+    return asOptionalString(result.rows[0]?.user_id);
+  }
+
+  async revokeAdminSession(token: string): Promise<void> {
+    const normalizedToken = asString(token).trim();
+
+    if (!normalizedToken) {
+      return;
+    }
+
+    const now = this.nowIso();
+
+    if (!this.pgPool) {
+      await this.mutateDb((db) => {
+        const session = db.adminSessions.find((item) => item.token === normalizedToken);
+
+        if (!session || session.revokedAt) {
+          return;
+        }
+
+        session.revokedAt = now;
+      });
+
+      return;
+    }
+
+    await this.pgPool.query(
+      `
+        UPDATE admin_sessions
+        SET revoked_at = COALESCE(revoked_at, $2::timestamptz)
+        WHERE token = $1
+      `,
+      [normalizedToken, now]
+    );
+  }
+
   async readDb(): Promise<Database> {
     if (!this.pgPool) {
       return this.readJsonDb();
@@ -808,5 +995,3 @@ export class DatabaseService implements OnModuleDestroy {
     return randomUUID();
   }
 }
-
-
