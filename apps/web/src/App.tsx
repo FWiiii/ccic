@@ -8,26 +8,9 @@ import { ProductSummary } from "./components/ProductSummary";
 import { TopTabs, type TabKey } from "./components/TopTabs";
 import { CompanyInfoTab } from "./components/tabs/CompanyInfoTab";
 import { ProductInfoTab } from "./components/tabs/ProductInfoTab";
-import { TraceInfoTab, type TraceStatus, type TraceStep } from "./components/tabs/TraceInfoTab";
+import { TraceInfoTab, type TraceStatus } from "./components/tabs/TraceInfoTab";
 
-const INSPECTION_AGENCY_FALLBACK =
-  "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
-
-const TRACE_STATUS_ORDER: Record<TraceStatus, number> = {
-  SUBMITTED: 1,
-  INSPECTING: 2,
-  COMPLETED: 3,
-};
-
-const TRACE_STEP_TEMPLATE: Array<{ status: TraceStatus; label: string }> = [
-  { status: "SUBMITTED", label: "\u5df2\u9001\u68c0" },
-  { status: "INSPECTING", label: "\u68c0\u6d4b\u4e2d" },
-  { status: "COMPLETED", label: "\u5df2\u68c0\u6d4b" },
-];
-
-type PublicTraceSteps = NonNullable<
-  NonNullable<NonNullable<PublicInspectionData["display"]>["traceInfo"]>["steps"]
->;
+const INSPECTION_AGENCY_FALLBACK = "中国检验认证集团奢侈品鉴定中心";
 
 const readSnFromUrl = () => {
   const params = new URLSearchParams(window.location.search);
@@ -68,41 +51,8 @@ const inferTraceStatusFromInspection = (inspectionStatus: string): TraceStatus =
   return "SUBMITTED";
 };
 
-const buildTraceSteps = (currentStatus: TraceStatus, sourceSteps?: PublicTraceSteps): TraceStep[] => {
-  const currentRank = TRACE_STATUS_ORDER[currentStatus];
-
-  const normalizedSource = (sourceSteps ?? [])
-    .filter((item: PublicTraceSteps[number]) => isTraceStatus(item.status))
-    .map((item: PublicTraceSteps[number]) => ({
-      status: item.status,
-      label:
-        String(item.label ?? "").trim() ||
-        TRACE_STEP_TEMPLATE.find((entry) => entry.status === item.status)?.label ||
-        "",
-      reached: Boolean(item.reached),
-    }));
-
-  if (normalizedSource.length === TRACE_STEP_TEMPLATE.length) {
-    return TRACE_STEP_TEMPLATE.map((template) => {
-      const fromApi = normalizedSource.find((item) => item.status === template.status);
-      return {
-        status: template.status,
-        label: fromApi?.label || template.label,
-        reached: fromApi?.reached ?? TRACE_STATUS_ORDER[template.status] <= currentRank,
-      };
-    });
-  }
-
-  return TRACE_STEP_TEMPLATE.map((item) => ({
-    status: item.status,
-    label: item.label,
-    reached: TRACE_STATUS_ORDER[item.status] <= currentRank,
-  }));
-};
-
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("taba");
-  const [expanded, setExpanded] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [querySn, setQuerySn] = useState(() => readSnFromUrl());
   const [inspectionData, setInspectionData] = useState<PublicInspectionData | null>(null);
@@ -120,7 +70,7 @@ export default function App() {
 
     if (!sn) {
       setInspectionData(null);
-      setErrorMessage("\u94fe\u63a5\u7f3a\u5c11 sn \u53c2\u6570\uff0c\u8bf7\u68c0\u67e5\u4e8c\u7ef4\u7801\u5730\u5740\u3002");
+      setErrorMessage("链接缺少 sn 参数，请检查二维码地址。");
       setIsLoading(false);
       return;
     }
@@ -140,9 +90,7 @@ export default function App() {
         }
 
         const message =
-          error instanceof Error && error.message
-            ? error.message
-            : "\u67e5\u8be2\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+          error instanceof Error && error.message ? error.message : "查询失败，请稍后重试。";
         setInspectionData(null);
         setErrorMessage(message);
       })
@@ -165,6 +113,22 @@ export default function App() {
 
     const merged = displayImages.length > 0 ? displayImages : fallbackImages;
     return Array.from(new Set(merged));
+  }, [inspectionData]);
+
+  const traceSampleImages = useMemo(() => {
+    const inspectionImages = (inspectionData?.images ?? [])
+      .map((item) => String(item?.url ?? "").trim())
+      .filter(Boolean);
+
+    if (inspectionImages.length > 0) {
+      return Array.from(new Set(inspectionImages));
+    }
+
+    const displayImages = (inspectionData?.display?.indexBannerImages ?? [])
+      .map((item) => String(item?.url ?? "").trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(displayImages));
   }, [inspectionData]);
 
   const productName =
@@ -191,11 +155,6 @@ export default function App() {
     return inferTraceStatusFromInspection(String(inspectionData?.inspection?.status ?? ""));
   }, [inspectionData]);
 
-  const traceSteps = useMemo(
-    () => buildTraceSteps(currentTraceStatus, inspectionData?.display?.traceInfo?.steps),
-    [currentTraceStatus, inspectionData]
-  );
-
   return (
     <div className="page-group app-root">
       <div className="page page-current" id="xindex">
@@ -203,9 +162,7 @@ export default function App() {
         <PageFooter />
 
         {isLoading ? (
-          <div className="app-query-status">
-            {"\u6b63\u5728\u6839\u636e SN \u67e5\u8be2\u9274\u5b9a\u7ed3\u679c..."}
-          </div>
+          <div className="app-query-status">{"正在根据 SN 查询鉴定结果..."}</div>
         ) : null}
 
         <div className="content contentDivOne native-scroll" style={{ paddingTop: 0 }}>
@@ -229,12 +186,12 @@ export default function App() {
 
               <div id="tab3" className={`tab tabc autoheigth ${activeTab === "tabc" ? "active" : ""}`}>
                 <TraceInfoTab
-                  expanded={expanded}
-                  onToggle={() => setExpanded((value) => !value)}
                   currentStatus={currentTraceStatus}
-                  steps={traceSteps}
                   recordDate={verificationDate}
-                  consignorName={consignorName}
+                  inspectionDepartment={inspectionAgencyName}
+                  conclusion={conclusion}
+                  sampleImages={traceSampleImages}
+                  onPreview={setPreviewImage}
                 />
               </div>
             </div>
@@ -246,7 +203,7 @@ export default function App() {
             <div className="unsetshowthreediv">
               <span>
                 {errorMessage ||
-                  "\u6b64\u8ffd\u6eaf\u7801\u65e0\u6548\u3002\u53ef\u8054\u7cfb\u4e2d\u68c0\u6eaf\u6e90\u670d\u52a1\u70ed\u7ebf0512-67998071\u54a8\u8be2\u3002"}
+                  "此追溯码无效。可联系中检溯源服务热线0512-67998071咨询。"}
               </span>
             </div>
             <div className="ht50">
@@ -261,11 +218,11 @@ export default function App() {
           <div className="unsetshowdoublediv">
             <div className="unsetshowthreediv">
               <span>
-                {"\u4e0b\u8f7d\u8be5\u6587\u4ef6\u5c06\u4ea7\u751f"}
+                {"下载该文件将产生"}
                 <i className="c-font-normal" id="file-size"></i>
-                {"\u7684\u6d41\u91cf"}
+                {"的流量"}
               </span>
-              <span className="c-pt-0">{"\u662f\u5426\u786e\u8ba4\u4e0b\u8f7d?"}</span>
+              <span className="c-pt-0">{"是否确认下载?"}</span>
             </div>
             <div className="ht50">
               <a
@@ -274,10 +231,10 @@ export default function App() {
                 href="#"
                 onClick={(e) => e.preventDefault()}
               >
-                <span>{"\u786e\u8ba4"}</span>
+                <span>{"确认"}</span>
               </a>
               <div id="file-cancal-btn" className="download-btn-frame">
-                <span>{"\u53d6\u6d88"}</span>
+                <span>{"取消"}</span>
               </div>
             </div>
           </div>

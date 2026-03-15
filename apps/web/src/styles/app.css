@@ -99,3 +99,292 @@ body,
   font-size: 12px;
   text-align: center;
 }
+
+.app-trace-steps {
+  background-color: #fff;
+}
+
+.app-trace-steps .van-steps {
+  width: 100%;
+}
+
+.app-trace-steps .van-steps__items {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-trace-steps .van-step {
+  position: relative;
+  padding-bottom: 10px;
+}
+
+.app-trace-steps .van-step:last-child {
+  padding-bottom: 0;
+}
+
+.app-trace-steps .van-step__title {
+  padding-left: 8px;
+}
+
+.app-trace-steps .van-step__title--active .van-cell__title {
+  color: #005bac;
+}
+
+.app-trace-steps .van-cell {
+  width: 100%;
+  border: 0;
+  margin: 0;
+  padding: 14px 4px 8px 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-trace-steps .van-cell__title {
+  font-size: 0.7rem;
+  color: #000;
+  font-weight: bold;
+}
+
+.app-trace-steps .van-cell__right-icon {
+  font-style: normal;
+  color: #666;
+  display: inline-flex;
+  align-items: center;
+}
+
+.app-trace-steps .van-icon-arrow::before {
+  content: "\25BE";
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.app-trace-steps .van-collapse-item__title[aria-expanded="false"] .van-icon-arrow::before {
+  transform: rotate(-90deg);
+}
+
+.app-trace-steps .van-collapse-item__wrapper {
+  padding-bottom: 4px;
+}
+
+.app-trace-record-header {
+  height: 32px;
+  border-radius: 10px 10px 0 0;
+  background-color: #005bac;
+  border: 1px solid #005bac;
+  margin: 15px 0 0;
+  display: flex;
+  align-items: center;
+}
+
+.app-trace-record-icon {
+  width: auto;
+  height: 80%;
+  padding: 5px 5px 5px 13px;
+}
+
+.app-trace-record-title {
+  display: block;
+  color: #fff;
+  padding-left: 12px;
+  font-size: 0.6rem;
+}
+
+.app-trace-record-body {
+  border: 1px solid #005bac;
+  border-radius: 0 0 10px 10px;
+}
+
+.app-trace-body-center {
+  width: 100%;
+  margin: 10px 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.app-trace-sample-image {
+  width: 95%;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.app-trace-sample-image:last-child {
+  margin-bottom: 0;
+}
+
+.app-trace-row-wrap {
+  width: 95%;
+  margin: 10px auto;
+}
+
+.app-trace-van-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.app-trace-van-row:last-child {
+  margin-bottom: 0;
+}
+
+.app-trace-van-col {
+  display: block;
+}
+
+.app-trace-van-col--8 {
+  width: 34%;
+}
+
+.app-trace-van-col--16 {
+  width: 66%;
+}
+
+.app-trace-label {
+  color: #333;
+  font-size: 0.6rem;
+  font-weight: bold;
+}
+
+.app-trace-value {
+  color: #333;
+  font-size: 0.6rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.app-trace-statement-wrap {
+  width: 95%;
+  margin: 0 auto 10px;
+}
+
+.app-trace-statement {
+  white-space: pre-line;
+  color: #333;
+  font-size: 0.58rem;
+  line-height: 1.7;
+  margin: 10px 0;
+}
+
+.app-trace-steps .van-step__circle-container {
+  position: absolute;
+  left: -24px;
+  top: 14px;
+  width: 20px;
+  height: 20px;
+  z-index: 2;
+  border-radius: 50%;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-trace-step-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.app-trace-steps .van-step--waiting .app-trace-step-icon {
+  opacity: 0.35;
+  filter: grayscale(100%);
+}
+
+.app-trace-steps .van-step__line {
+  position: absolute;
+  left: -15px;
+  top: 34px;
+  bottom: -4px;
+  width: 1px;
+  background-color: #d6d6d6;
+}
+
+.app-trace-steps .van-step--finish .van-step__line,
+.app-trace-steps .van-step--process .van-step__line {
+  background-color: #9ab9d8;
+}
+
+.app-trace-steps .van-step:last-child .van-step__line {
+  display: none;
+}
+
+.app-trace-bottom-space {
+  padding-bottom: 18px;
+  background-color: #fff;
+}
+
+/* Trace tab visual alignment (font + chevron) */
+.app-trace-steps,
+.app-trace-steps button,
+.app-trace-steps span,
+.app-trace-steps p {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+}
+
+.app-trace-steps .van-step__title--active .van-cell__title {
+  color: #323233;
+}
+
+.app-trace-steps .van-cell {
+  padding: 12px 4px 8px 0;
+}
+
+.app-trace-steps .van-cell__title {
+  font-size: 14px;
+  line-height: 22px;
+  color: #323233;
+  font-weight: 400;
+}
+
+.app-trace-steps .van-cell__right-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: #969799;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-trace-steps .van-icon-arrow::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-top: 1.5px solid currentColor;
+  border-right: 1.5px solid currentColor;
+  transform: rotate(135deg);
+  transition: transform 0.2s ease;
+}
+
+.app-trace-steps .van-collapse-item__title[aria-expanded="false"] .van-icon-arrow::before {
+  transform: rotate(45deg);
+}
+
+.app-trace-record-title {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.app-trace-label {
+  color: #323233;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.app-trace-value {
+  color: #646566;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.app-trace-statement {
+  color: #646566;
+  font-size: 12px;
+  line-height: 1.7;
+}
