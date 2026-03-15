@@ -1,0 +1,255 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id          String         @id @db.Text
+  username    String         @unique @db.VarChar(64)
+  password    String         @db.VarChar(255)
+  displayName String         @map("display_name") @db.VarChar(128)
+  role        String         @db.VarChar(32)
+  status      String         @db.VarChar(16)
+  lastLoginAt DateTime?      @map("last_login_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @default(now()) @map("updated_at")
+  sessions    AdminSession[]
+
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id         String    @id @db.Text
+  token      String    @unique @db.VarChar(255)
+  userId     String    @map("user_id") @db.Text
+  user       AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime? @map("expires_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, revokedAt], map: "idx_admin_sessions_user_revoked")
+  @@map("admin_sessions")
+}
+
+model MediaAsset {
+  id        String    @id @db.Text
+  url       String
+  name      String    @db.VarChar(255)
+  mimeType  String    @map("mime_type") @db.VarChar(100)
+  sizeBytes BigInt    @map("size_bytes")
+  width     Int?
+  height    Int?
+  bucket    String?   @db.VarChar(128)
+  objectKey String?   @map("object_key") @db.VarChar(512)
+  sha256    String?   @db.Char(64)
+  createdBy String?   @map("created_by") @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("media_assets")
+}
+
+model Company {
+  id              String   @id @db.Text
+  name            String   @db.VarChar(200)
+  shortName       String?  @map("short_name") @db.VarChar(100)
+  phone           String?  @db.VarChar(50)
+  address         String?  @db.VarChar(500)
+  descriptionHtml String?  @map("description_html")
+  logoAssetId     String?  @map("logo_asset_id") @db.Text
+  status          String   @db.VarChar(16)
+  createdBy       String?  @map("created_by") @db.Text
+  updatedBy       String?  @map("updated_by") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+  @@map("companies")
+}
+
+model Product {
+  id              String   @id @db.Text
+  sku             String?  @unique @db.VarChar(64)
+  name            String   @db.VarChar(200)
+  brand           String?  @db.VarChar(100)
+  model           String?  @db.VarChar(100)
+  material        String?
+  summary         String?
+  productInfoHtml String?  @map("product_info_html")
+  companyId       String   @map("company_id") @db.Text
+  status          String   @db.VarChar(16)
+  publishedAt     DateTime? @map("published_at")
+  createdBy       String?  @map("created_by") @db.Text
+  updatedBy       String?  @map("updated_by") @db.Text
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @map("updated_at")
+
+  @@index([companyId], map: "idx_products_company_id")
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @db.Text
+  productId String   @map("product_id") @db.Text
+  assetId   String   @map("asset_id") @db.Text
+  scene     String   @db.VarChar(32)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([productId, assetId, scene])
+  @@index([productId, scene, sortOrder], map: "idx_product_images_product_scene_sort")
+  @@map("product_images")
+}
+
+model InspectionReport {
+  id            String   @id @db.Text
+  productId     String   @unique @map("product_id") @db.Text
+  consignorName String?  @map("consignor_name") @db.VarChar(200)
+  inspectionDate DateTime? @map("inspection_date") @db.Date
+  conclusion    String?
+  notes         Json
+  rawHtml       String?  @map("raw_html")
+  createdBy     String?  @map("created_by") @db.Text
+  updatedBy     String?  @map("updated_by") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @map("updated_at")
+
+  @@map("inspection_reports")
+}
+
+model Inspection {
+  id             String   @id @db.Text
+  sn             String   @unique @db.VarChar(128)
+  productId      String   @map("product_id") @db.Text
+  companyId      String   @map("company_id") @db.Text
+  inspectionTime DateTime @map("inspection_time")
+  result         String   @db.VarChar(16)
+  status         String   @db.VarChar(16)
+  conclusion     String?
+  createdBy      String?  @map("created_by") @db.Text
+  updatedBy      String?  @map("updated_by") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @map("updated_at")
+
+  @@index([productId], map: "idx_inspections_product_id")
+  @@index([companyId], map: "idx_inspections_company_id")
+  @@index([status, inspectionTime], map: "idx_inspections_status_time")
+  @@map("inspections")
+}
+
+model InspectionImage {
+  id           String   @id @db.Text
+  inspectionId String   @map("inspection_id") @db.Text
+  assetId      String   @map("asset_id") @db.Text
+  scene        String   @db.VarChar(32)
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([inspectionId, assetId, scene])
+  @@index([inspectionId, scene, sortOrder], map: "idx_inspection_images_inspection_scene_sort")
+  @@map("inspection_images")
+}
+
+model InspectionEvent {
+  id           String   @id @db.Text
+  inspectionId String   @map("inspection_id") @db.Text
+  eventTime    DateTime @map("event_time")
+  eventType    String   @map("event_type") @db.VarChar(32)
+  title        String   @db.VarChar(200)
+  content      String?
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([inspectionId, eventTime, sortOrder], map: "idx_inspection_events_inspection_time")
+  @@map("inspection_events")
+}
+
+model TracePage {
+  id            String    @id @db.Text
+  sn            String    @unique @db.VarChar(128)
+  consignorName String?   @map("consignor_name") @db.VarChar(200)
+  inspectionDate DateTime? @map("inspection_date") @db.Date
+  traceContent  String?   @map("trace_content")
+  status        String    @db.VarChar(16)
+  createdBy     String?   @map("created_by") @db.Text
+  updatedBy     String?   @map("updated_by") @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @map("updated_at")
+  banners       TracePageBanner[]
+
+  @@index([sn, status], map: "idx_trace_pages_sn_status")
+  @@map("trace_pages")
+}
+
+model TracePageBanner {
+  id          String    @id @db.Text
+  tracePageId String    @map("trace_page_id") @db.Text
+  assetId     String    @map("asset_id") @db.Text
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  tracePage   TracePage @relation(fields: [tracePageId], references: [id], onDelete: Cascade)
+
+  @@unique([tracePageId, assetId])
+  @@index([tracePageId, sortOrder], map: "idx_trace_page_banners_page_sort")
+  @@map("trace_page_banners")
+}
+
+model TraceCode {
+  id              String    @id @db.Text
+  code            String    @unique @db.VarChar(128)
+  productId       String    @map("product_id") @db.Text
+  verifyStatus    String    @map("verify_status") @db.VarChar(16)
+  verifyCount     Int       @default(0) @map("verify_count")
+  firstVerifiedAt DateTime? @map("first_verified_at")
+  lastVerifiedAt  DateTime? @map("last_verified_at")
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([productId], map: "idx_trace_codes_product_id")
+  @@index([verifyStatus], map: "idx_trace_codes_status")
+  @@map("trace_codes")
+}
+
+model TraceEvent {
+  id          String   @id @db.Text
+  traceCodeId String   @map("trace_code_id") @db.Text
+  eventTime   DateTime @map("event_time")
+  eventType   String   @map("event_type") @db.VarChar(32)
+  title       String   @db.VarChar(200)
+  content     String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([traceCodeId, eventTime], map: "idx_trace_events_code_time")
+  @@map("trace_events")
+}
+
+model TraceVerifyLog {
+  id         String   @id @db.Text
+  traceCodeId String  @map("trace_code_id") @db.Text
+  verifyAt   DateTime @default(now()) @map("verify_at")
+  isValid    Boolean  @map("is_valid")
+  clientIp   String?  @map("client_ip") @db.Inet
+  userAgent  String?  @map("user_agent")
+  referer    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([traceCodeId, verifyAt], map: "idx_trace_verify_logs_code_time")
+  @@map("trace_verify_logs")
+}
+
+model AuditLog {
+  id         String   @id @db.Text
+  actorUserId String? @map("actor_user_id") @db.Text
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(64)
+  entityId   String?  @map("entity_id") @db.Text
+  detail     Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([actorUserId, createdAt], map: "idx_audit_logs_actor_created_at")
+  @@map("audit_logs")
+}

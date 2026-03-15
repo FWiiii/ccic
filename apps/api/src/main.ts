@@ -1,7 +1,12 @@
 import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { join } from "node:path";
+import { config as loadEnv } from "dotenv";
 import { AppModule } from "./app.module";
+
+loadEnv({ path: join(process.cwd(), ".env"), override: false });
+loadEnv({ path: join(process.cwd(), "apps", "api", ".env"), override: false });
+loadEnv({ path: join(__dirname, "..", ".env"), override: false });
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);

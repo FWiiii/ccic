@@ -1,13 +1,35 @@
-import { randomUUID } from "node:crypto";
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { Injectable, Logger, type OnModuleDestroy } from "@nestjs/common";
-import { Pool, type PoolClient } from "pg";
-import type { Database } from "./database.types";
+import { randomBytes, randomUUID } from "node:crypto";
+import { Injectable, Logger } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import type {
+  AdminSession,
+  AdminUser,
+  AuditLog,
+  Company,
+  Database,
+  Inspection,
+  InspectionEvent,
+  InspectionImage,
+  InspectionReport,
+  MediaAsset,
+  Product,
+  ProductImage,
+  TraceCode,
+  TraceEvent,
+  TracePage,
+  TraceVerifyLog,
+} from "./database.types";
+import { PrismaService } from "./prisma.service";
 
-const dataPath = path.resolve(process.cwd(), "data", "db.json");
+type Identifiable = { id: string };
 
-type DbRow = Record<string, unknown>;
+type TracePageBannerRow = {
+  id: string;
+  tracePageId: string;
+  assetId: string;
+  sortOrder: number;
+  createdAt: string;
+};
 
 const EMPTY_DB: Database = {
   adminUsers: [],
@@ -60,7 +82,57 @@ const asOptionalNumber = (value: unknown) => {
   return Number.isFinite(num) ? num : undefined;
 };
 
-const asIsoString = (value: unknown, fallback: string) => {
+const toDate = (value: unknown, fallback = new Date()) => {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  const text = asString(value).trim();
+  if (!text) {
+    return fallback;
+  }
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) {
+    return fallback;
+  }
+
+  return parsed;
+};
+
+const toOptionalDate = (value: unknown) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = toDate(value, new Date(Number.NaN));
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed;
+};
+
+const toOptionalDateOnly = (value: unknown) => {
+  const text = asString(value).trim();
+  if (!text) {
+    return null;
+  }
+
+  const matched = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (matched) {
+    return new Date(`${matched[1]}-${matched[2]}-${matched[3]}T00:00:00.000Z`);
+  }
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return new Date(parsed.toISOString().slice(0, 10) + "T00:00:00.000Z");
+};
+
+const toIsoString = (value: unknown, fallback: string) => {
   if (value instanceof Date) {
     return value.toISOString();
   }
@@ -72,21 +144,21 @@ const asIsoString = (value: unknown, fallback: string) => {
 
   const parsed = new Date(text);
   if (Number.isNaN(parsed.getTime())) {
-    return text;
+    return fallback;
   }
 
   return parsed.toISOString();
 };
 
-const asOptionalIsoString = (value: unknown) => {
+const toOptionalIsoString = (value: unknown) => {
   if (value === null || value === undefined || value === "") {
     return undefined;
   }
 
-  return asIsoString(value, "");
+  return toIsoString(value, "");
 };
 
-const asOptionalDateString = (value: unknown) => {
+const toOptionalDateString = (value: unknown) => {
   if (value === null || value === undefined || value === "") {
     return undefined;
   }
@@ -119,168 +191,181 @@ const parseCsv = (value: unknown) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const normalizeJsonObject = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Record<string, unknown>;
+};
+
+const isEqual = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
+
+const normalizeToken = (value: unknown) => asString(value).trim();
+
+const buildDiffById = <T extends Identifiable>(previous: T[], next: T[]) => {
+  const previousMap = new Map(previous.map((item) => [item.id, item] as const));
+  const nextMap = new Map(next.map((item) => [item.id, item] as const));
+
+  const toDeleteIds: string[] = [];
+  for (const id of previousMap.keys()) {
+    if (!nextMap.has(id)) {
+      toDeleteIds.push(id);
+    }
+  }
+
+  const toUpsert: T[] = [];
+  for (const [id, item] of nextMap) {
+    const previousItem = previousMap.get(id);
+    if (!previousItem || !isEqual(previousItem, item)) {
+      toUpsert.push(item);
+    }
+  }
+
+  return {
+    toDeleteIds,
+    toUpsert,
+  };
+};
+
 @Injectable()
-export class DatabaseService implements OnModuleDestroy {
+export class DatabaseService {
   private readonly logger = new Logger(DatabaseService.name);
-  private readonly postgresUrl = asString(process.env.DATABASE_URL).trim();
-  private readonly pgPool = this.postgresUrl ? new Pool({ connectionString: this.postgresUrl }) : null;
   private readonly adminSessionTtlHours = asNumber(process.env.ADMIN_SESSION_TTL_HOURS, 24 * 30);
+  private readonly revokedSessionRetentionHours = asNumber(
+    process.env.ADMIN_SESSION_REVOKED_RETENTION_HOURS,
+    24 * 7
+  );
+  private writeQueue: Promise<void> = Promise.resolve();
 
-  async onModuleDestroy() {
-    if (!this.pgPool) {
-      return;
-    }
-
-    await this.pgPool.end().catch(() => undefined);
-  }
-
-  private async ensureDataFile() {
-    await fs.mkdir(path.dirname(dataPath), { recursive: true });
-
-    try {
-      await fs.access(dataPath);
-    } catch {
-      await fs.writeFile(dataPath, JSON.stringify(EMPTY_DB, null, 2), "utf8");
+  constructor(private readonly prisma: PrismaService) {
+    const databaseUrl = asString(process.env.DATABASE_URL).trim();
+    if (!databaseUrl) {
+      throw new Error(
+        "DATABASE_URL is required. Set it in environment or apps/api/.env (see apps/api/.env.example). JSON fallback has been removed."
+      );
     }
   }
 
-  private normalizeDbShape(parsed: Partial<Database>): Database {
+  private cloneDb(db: Database): Database {
+    if (typeof structuredClone === "function") {
+      return structuredClone(db);
+    }
+
+    return JSON.parse(JSON.stringify(db)) as Database;
+  }
+
+  private async withWriteLock<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.writeQueue.then(task, task);
+    this.writeQueue = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
+  private toAdminUser(
+    item: Pick<
+      Prisma.AdminUserGetPayload<object>,
+      "id" | "username" | "password" | "displayName" | "role" | "status" | "createdAt" | "updatedAt"
+    >,
+    now: string
+  ): AdminUser {
     return {
-      ...EMPTY_DB,
-      ...parsed,
-      adminUsers: parsed.adminUsers ?? [],
-      adminSessions: parsed.adminSessions ?? [],
-      mediaAssets: parsed.mediaAssets ?? [],
-      companies: parsed.companies ?? [],
-      products: parsed.products ?? [],
-      productImages: parsed.productImages ?? [],
-      inspectionReports: parsed.inspectionReports ?? [],
-      inspections: parsed.inspections ?? [],
-      inspectionImages: parsed.inspectionImages ?? [],
-      inspectionEvents: parsed.inspectionEvents ?? [],
-      traceCodes: parsed.traceCodes ?? [],
-      tracePages: parsed.tracePages ?? [],
-      traceEvents: parsed.traceEvents ?? [],
-      traceVerifyLogs: parsed.traceVerifyLogs ?? [],
-      auditLogs: parsed.auditLogs ?? [],
+      id: item.id,
+      username: item.username,
+      password: item.password,
+      displayName: item.displayName,
+      role: asString(item.role) as AdminUser["role"],
+      status: asString(item.status) as AdminUser["status"],
+      createdAt: toIsoString(item.createdAt, now),
+      updatedAt: toIsoString(item.updatedAt, now),
     };
   }
 
-  private async readJsonDb(): Promise<Database> {
-    await this.ensureDataFile();
-    const raw = await fs.readFile(dataPath, "utf8");
-    const parsed = JSON.parse(raw) as Partial<Database>;
-    return this.normalizeDbShape(parsed);
-  }
+  private buildTracePageBannerRows(tracePages: TracePage[]): TracePageBannerRow[] {
+    const rows: TracePageBannerRow[] = [];
 
-  private async writeJsonDb(db: Database): Promise<void> {
-    await fs.writeFile(dataPath, JSON.stringify(db, null, 2), "utf8");
-  }
+    for (const tracePage of tracePages) {
+      const seenAssetIds = new Set<string>();
+      const assetIds = parseCsv(tracePage.indexBannerAssetIdsCsv);
+      let sortOrder = 0;
 
-  private async withPgClient<T>(handler: (client: PoolClient) => Promise<T>): Promise<T> {
-    if (!this.pgPool) {
-      throw new Error("PostgreSQL pool is not initialized");
+      for (const assetId of assetIds) {
+        if (!assetId || seenAssetIds.has(assetId)) {
+          continue;
+        }
+
+        seenAssetIds.add(assetId);
+        rows.push({
+          id: `${tracePage.id}-banner-${sortOrder}`,
+          tracePageId: tracePage.id,
+          assetId,
+          sortOrder,
+          createdAt: tracePage.createdAt,
+        });
+        sortOrder += 1;
+      }
     }
 
-    const client = await this.pgPool.connect();
-
-    try {
-      return await handler(client);
-    } finally {
-      client.release();
-    }
+    return rows;
   }
 
-  private async readDbFromPostgres(): Promise<Database> {
-    if (!this.pgPool) {
-      throw new Error("PostgreSQL pool is not initialized");
+  private getSessionExpiresAt() {
+    if (!Number.isFinite(this.adminSessionTtlHours) || this.adminSessionTtlHours <= 0) {
+      return null;
     }
 
+    return new Date(Date.now() + this.adminSessionTtlHours * 60 * 60 * 1000);
+  }
+
+  async readDb(): Promise<Database> {
     const [
-      adminUsersResult,
-      adminSessionsResult,
-      mediaAssetsResult,
-      companiesResult,
-      productsResult,
-      productImagesResult,
-      inspectionReportsResult,
-      inspectionsResult,
-      inspectionImagesResult,
-      inspectionEventsResult,
-      traceCodesResult,
-      tracePagesResult,
-      tracePageBannersResult,
-      traceEventsResult,
-      traceVerifyLogsResult,
-      auditLogsResult,
+      adminUsers,
+      adminSessions,
+      mediaAssets,
+      companies,
+      products,
+      productImages,
+      inspectionReports,
+      inspections,
+      inspectionImages,
+      inspectionEvents,
+      tracePages,
+      tracePageBanners,
+      traceCodes,
+      traceEvents,
+      traceVerifyLogs,
+      auditLogs,
     ] = await Promise.all([
-      this.pgPool.query<DbRow>(
-        "SELECT id, username, password, display_name, role, status, created_at, updated_at FROM admin_users"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, token, user_id, expires_at, last_used_at, revoked_at, created_at FROM admin_sessions"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, url, name, mime_type, size_bytes, width, height, created_at FROM media_assets"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, name, short_name, phone, address, description_html, logo_asset_id, status, created_at, updated_at FROM companies"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, sku, name, brand, model, material, summary, product_info_html, company_id, status, published_at, created_at, updated_at FROM products"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, product_id, asset_id, scene, sort_order, created_at FROM product_images ORDER BY sort_order ASC"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, product_id, consignor_name, inspection_date, conclusion, notes, raw_html, created_at, updated_at FROM inspection_reports"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, sn, product_id, company_id, inspection_time, result, status, conclusion, created_at, updated_at FROM inspections"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, inspection_id, asset_id, scene, sort_order, created_at FROM inspection_images ORDER BY sort_order ASC"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, inspection_id, event_time, event_type, title, content, sort_order, created_at FROM inspection_events ORDER BY event_time DESC, sort_order ASC"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, code, product_id, verify_status, verify_count, first_verified_at, last_verified_at, expires_at, created_at FROM trace_codes"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, sn, consignor_name, inspection_date, trace_content, status, created_at, updated_at FROM trace_pages"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, trace_page_id, asset_id, sort_order, created_at FROM trace_page_banners ORDER BY sort_order ASC"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, trace_code_id, event_time, event_type, title, content, sort_order, created_at FROM trace_events ORDER BY event_time DESC, sort_order ASC"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, trace_code_id, verify_at, is_valid, client_ip, user_agent FROM trace_verify_logs ORDER BY verify_at DESC"
-      ),
-      this.pgPool.query<DbRow>(
-        "SELECT id, actor_user_id, action, entity_type, entity_id, detail, created_at FROM audit_logs ORDER BY created_at DESC"
-      ),
+      this.prisma.adminUser.findMany(),
+      this.prisma.adminSession.findMany(),
+      this.prisma.mediaAsset.findMany(),
+      this.prisma.company.findMany(),
+      this.prisma.product.findMany(),
+      this.prisma.productImage.findMany({ orderBy: [{ sortOrder: "asc" }] }),
+      this.prisma.inspectionReport.findMany(),
+      this.prisma.inspection.findMany(),
+      this.prisma.inspectionImage.findMany({ orderBy: [{ sortOrder: "asc" }] }),
+      this.prisma.inspectionEvent.findMany({ orderBy: [{ eventTime: "desc" }, { sortOrder: "asc" }] }),
+      this.prisma.tracePage.findMany(),
+      this.prisma.tracePageBanner.findMany({ orderBy: [{ sortOrder: "asc" }] }),
+      this.prisma.traceCode.findMany(),
+      this.prisma.traceEvent.findMany({ orderBy: [{ eventTime: "desc" }, { sortOrder: "asc" }] }),
+      this.prisma.traceVerifyLog.findMany({ orderBy: [{ verifyAt: "desc" }] }),
+      this.prisma.auditLog.findMany({ orderBy: [{ createdAt: "desc" }] }),
     ]);
 
     const now = this.nowIso();
 
     const tracePageBannerMap = new Map<string, Array<{ assetId: string; sortOrder: number }>>();
-    for (const row of tracePageBannersResult.rows) {
-      const tracePageId = asString(row.trace_page_id).trim();
-      const assetId = asString(row.asset_id).trim();
-
-      if (!tracePageId || !assetId) {
-        continue;
-      }
-
-      const list = tracePageBannerMap.get(tracePageId) ?? [];
+    for (const item of tracePageBanners) {
+      const list = tracePageBannerMap.get(item.tracePageId) ?? [];
       list.push({
-        assetId,
-        sortOrder: asNumber(row.sort_order, 0),
+        assetId: item.assetId,
+        sortOrder: item.sortOrder,
       });
-      tracePageBannerMap.set(tracePageId, list);
+      tracePageBannerMap.set(item.tracePageId, list);
     }
 
     for (const list of tracePageBannerMap.values()) {
@@ -288,703 +373,849 @@ export class DatabaseService implements OnModuleDestroy {
     }
 
     return {
-      adminUsers: adminUsersResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        username: asString(row.username),
-        password: asString(row.password),
-        displayName: asString(row.display_name),
-        role: asString(row.role) as "SUPER_ADMIN" | "EDITOR" | "VIEWER",
-        status: asString(row.status) as "ACTIVE" | "DISABLED",
-        createdAt: asIsoString(row.created_at, now),
-        updatedAt: asIsoString(row.updated_at, now),
+      ...EMPTY_DB,
+      adminUsers: adminUsers.map((item) => this.toAdminUser(item, now)),
+      adminSessions: adminSessions.map((item): AdminSession => ({
+        id: item.id,
+        token: item.token,
+        userId: item.userId,
+        expiresAt: toOptionalIsoString(item.expiresAt),
+        lastUsedAt: toOptionalIsoString(item.lastUsedAt),
+        revokedAt: toOptionalIsoString(item.revokedAt),
+        createdAt: toIsoString(item.createdAt, now),
       })),
-      adminSessions: adminSessionsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        token: asString(row.token),
-        userId: asString(row.user_id),
-        expiresAt: asOptionalIsoString(row.expires_at),
-        lastUsedAt: asOptionalIsoString(row.last_used_at),
-        revokedAt: asOptionalIsoString(row.revoked_at),
-        createdAt: asIsoString(row.created_at, now),
+      mediaAssets: mediaAssets.map((item): MediaAsset => ({
+        id: item.id,
+        url: item.url,
+        name: item.name,
+        mimeType: item.mimeType,
+        sizeBytes: Number(item.sizeBytes),
+        width: asOptionalNumber(item.width),
+        height: asOptionalNumber(item.height),
+        createdAt: toIsoString(item.createdAt, now),
       })),
-      mediaAssets: mediaAssetsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        url: asString(row.url),
-        name: asString(row.name),
-        mimeType: asString(row.mime_type),
-        sizeBytes: asNumber(row.size_bytes, 0),
-        width: asOptionalNumber(row.width),
-        height: asOptionalNumber(row.height),
-        createdAt: asIsoString(row.created_at, now),
+      companies: companies.map((item): Company => ({
+        id: item.id,
+        name: item.name,
+        shortName: asOptionalString(item.shortName),
+        phone: asOptionalString(item.phone),
+        address: asOptionalString(item.address),
+        descriptionHtml: asOptionalString(item.descriptionHtml),
+        logoAssetId: asOptionalString(item.logoAssetId),
+        status: asString(item.status) as Company["status"],
+        createdAt: toIsoString(item.createdAt, now),
+        updatedAt: toIsoString(item.updatedAt, now),
       })),
-      companies: companiesResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        name: asString(row.name),
-        shortName: asOptionalString(row.short_name),
-        phone: asOptionalString(row.phone),
-        address: asOptionalString(row.address),
-        descriptionHtml: asOptionalString(row.description_html),
-        logoAssetId: asOptionalString(row.logo_asset_id),
-        status: asString(row.status) as "DRAFT" | "PUBLISHED" | "ARCHIVED",
-        createdAt: asIsoString(row.created_at, now),
-        updatedAt: asIsoString(row.updated_at, now),
+      products: products.map((item): Product => ({
+        id: item.id,
+        sku: asOptionalString(item.sku),
+        name: item.name,
+        brand: asOptionalString(item.brand),
+        model: asOptionalString(item.model),
+        material: asOptionalString(item.material),
+        summary: asOptionalString(item.summary),
+        productInfoHtml: asOptionalString(item.productInfoHtml),
+        companyId: item.companyId,
+        status: asString(item.status) as Product["status"],
+        publishedAt: toOptionalIsoString(item.publishedAt),
+        createdAt: toIsoString(item.createdAt, now),
+        updatedAt: toIsoString(item.updatedAt, now),
       })),
-      products: productsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        sku: asOptionalString(row.sku),
-        name: asString(row.name),
-        brand: asOptionalString(row.brand),
-        model: asOptionalString(row.model),
-        material: asOptionalString(row.material),
-        summary: asOptionalString(row.summary),
-        productInfoHtml: asOptionalString(row.product_info_html),
-        companyId: asString(row.company_id),
-        status: asString(row.status) as "DRAFT" | "PUBLISHED" | "ARCHIVED",
-        publishedAt: asOptionalIsoString(row.published_at),
-        createdAt: asIsoString(row.created_at, now),
-        updatedAt: asIsoString(row.updated_at, now),
+      productImages: productImages.map((item): ProductImage => ({
+        id: item.id,
+        productId: item.productId,
+        assetId: item.assetId,
+        scene: asString(item.scene) as ProductImage["scene"],
+        sortOrder: item.sortOrder,
+        createdAt: toIsoString(item.createdAt, now),
       })),
-      productImages: productImagesResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        productId: asString(row.product_id),
-        assetId: asString(row.asset_id),
-        scene: asString(row.scene) as "HERO" | "CAROUSEL" | "COMPANY_DETAIL" | "DETAIL",
-        sortOrder: asNumber(row.sort_order, 0),
-        createdAt: asIsoString(row.created_at, now),
+      inspectionReports: inspectionReports.map((item): InspectionReport => ({
+        id: item.id,
+        productId: item.productId,
+        consignorName: asOptionalString(item.consignorName),
+        inspectionDate: toOptionalDateString(item.inspectionDate),
+        conclusion: asOptionalString(item.conclusion),
+        notes: asArray<unknown>(item.notes).map((entry) => asString(entry)),
+        rawHtml: asOptionalString(item.rawHtml),
+        createdAt: toIsoString(item.createdAt, now),
+        updatedAt: toIsoString(item.updatedAt, now),
       })),
-      inspectionReports: inspectionReportsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        productId: asString(row.product_id),
-        consignorName: asOptionalString(row.consignor_name),
-        inspectionDate: asOptionalDateString(row.inspection_date),
-        conclusion: asOptionalString(row.conclusion),
-        notes: asArray<unknown>(row.notes).map((item) => asString(item)),
-        rawHtml: asOptionalString(row.raw_html),
-        createdAt: asIsoString(row.created_at, now),
-        updatedAt: asIsoString(row.updated_at, now),
+      inspections: inspections.map((item): Inspection => ({
+        id: item.id,
+        sn: item.sn,
+        productId: item.productId,
+        companyId: item.companyId,
+        inspectionTime: toIsoString(item.inspectionTime, now),
+        result: asString(item.result) as Inspection["result"],
+        status: asString(item.status) as Inspection["status"],
+        conclusion: asOptionalString(item.conclusion),
+        createdAt: toIsoString(item.createdAt, now),
+        updatedAt: toIsoString(item.updatedAt, now),
       })),
-      inspections: inspectionsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        sn: asString(row.sn),
-        productId: asString(row.product_id),
-        companyId: asString(row.company_id),
-        inspectionTime: asIsoString(row.inspection_time, now),
-        result: asString(row.result) as "PASS" | "FAIL" | "PENDING",
-        status: asString(row.status) as "DRAFT" | "REVIEWED" | "PUBLISHED" | "REVOKED",
-        conclusion: asOptionalString(row.conclusion),
-        createdAt: asIsoString(row.created_at, now),
-        updatedAt: asIsoString(row.updated_at, now),
+      inspectionImages: inspectionImages.map((item): InspectionImage => ({
+        id: item.id,
+        inspectionId: item.inspectionId,
+        assetId: item.assetId,
+        scene: asString(item.scene) as InspectionImage["scene"],
+        sortOrder: item.sortOrder,
+        createdAt: toIsoString(item.createdAt, now),
       })),
-      inspectionImages: inspectionImagesResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        inspectionId: asString(row.inspection_id),
-        assetId: asString(row.asset_id),
-        scene: asString(row.scene) as "HERO" | "DETAIL" | "CERT" | "OTHER",
-        sortOrder: asNumber(row.sort_order, 0),
-        createdAt: asIsoString(row.created_at, now),
+      inspectionEvents: inspectionEvents.map((item): InspectionEvent => ({
+        id: item.id,
+        inspectionId: item.inspectionId,
+        eventTime: toIsoString(item.eventTime, now),
+        eventType: asString(item.eventType) as InspectionEvent["eventType"],
+        title: item.title,
+        content: asOptionalString(item.content),
+        sortOrder: item.sortOrder,
+        createdAt: toIsoString(item.createdAt, now),
       })),
-      inspectionEvents: inspectionEventsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        inspectionId: asString(row.inspection_id),
-        eventTime: asIsoString(row.event_time, now),
-        eventType: asString(row.event_type) as
-          | "SUBMIT"
-          | "SAMPLE_RECEIVED"
-          | "INSPECTION"
-          | "CERTIFIED"
-          | "PUBLISHED"
-          | "OTHER",
-        title: asString(row.title),
-        content: asOptionalString(row.content),
-        sortOrder: asNumber(row.sort_order, 0),
-        createdAt: asIsoString(row.created_at, now),
+      traceCodes: traceCodes.map((item): TraceCode => ({
+        id: item.id,
+        code: item.code,
+        productId: item.productId,
+        verifyStatus: asString(item.verifyStatus) as TraceCode["verifyStatus"],
+        verifyCount: item.verifyCount,
+        firstVerifiedAt: toOptionalIsoString(item.firstVerifiedAt),
+        lastVerifiedAt: toOptionalIsoString(item.lastVerifiedAt),
+        expiresAt: toOptionalIsoString(item.expiresAt),
+        createdAt: toIsoString(item.createdAt, now),
       })),
-      traceCodes: traceCodesResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        code: asString(row.code),
-        productId: asString(row.product_id),
-        verifyStatus: asString(row.verify_status) as "VALID" | "INVALID" | "EXPIRED" | "REVOKED",
-        verifyCount: asNumber(row.verify_count, 0),
-        firstVerifiedAt: asOptionalIsoString(row.first_verified_at),
-        lastVerifiedAt: asOptionalIsoString(row.last_verified_at),
-        expiresAt: asOptionalIsoString(row.expires_at),
-        createdAt: asIsoString(row.created_at, now),
-      })),
-      tracePages: tracePagesResult.rows.map((row: DbRow) => {
-        const id = asString(row.id);
-        const banners = tracePageBannerMap.get(id) ?? [];
-
+      tracePages: tracePages.map((item): TracePage => {
+        const banners = tracePageBannerMap.get(item.id) ?? [];
         return {
-          id,
-          sn: asString(row.sn),
-          indexBannerAssetIdsCsv: banners.map((item) => item.assetId).join(","),
-          consignorName: asOptionalString(row.consignor_name),
-          inspectionDate: asOptionalDateString(row.inspection_date),
-          traceContent: asOptionalString(row.trace_content),
-          status: asString(row.status) as "DRAFT" | "PUBLISHED" | "ARCHIVED",
-          createdAt: asIsoString(row.created_at, now),
-          updatedAt: asIsoString(row.updated_at, now),
+          id: item.id,
+          sn: item.sn,
+          indexBannerAssetIdsCsv: banners.map((banner) => banner.assetId).join(","),
+          consignorName: asOptionalString(item.consignorName),
+          inspectionDate: toOptionalDateString(item.inspectionDate),
+          traceContent: asOptionalString(item.traceContent),
+          status: asString(item.status) as TracePage["status"],
+          createdAt: toIsoString(item.createdAt, now),
+          updatedAt: toIsoString(item.updatedAt, now),
         };
       }),
-      traceEvents: traceEventsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        traceCodeId: asString(row.trace_code_id),
-        eventTime: asIsoString(row.event_time, now),
-        eventType: asString(row.event_type) as "SUBMIT" | "INSPECTION" | "CERTIFIED" | "UPDATED" | "OTHER",
-        title: asString(row.title),
-        content: asOptionalString(row.content),
-        sortOrder: asNumber(row.sort_order, 0),
-        createdAt: asIsoString(row.created_at, now),
+      traceEvents: traceEvents.map((item): TraceEvent => ({
+        id: item.id,
+        traceCodeId: item.traceCodeId,
+        eventTime: toIsoString(item.eventTime, now),
+        eventType: asString(item.eventType) as TraceEvent["eventType"],
+        title: item.title,
+        content: asOptionalString(item.content),
+        sortOrder: item.sortOrder,
+        createdAt: toIsoString(item.createdAt, now),
       })),
-      traceVerifyLogs: traceVerifyLogsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        traceCodeId: asString(row.trace_code_id),
-        verifyAt: asIsoString(row.verify_at, now),
-        isValid: Boolean(row.is_valid),
-        clientIp: asOptionalString(row.client_ip),
-        userAgent: asOptionalString(row.user_agent),
+      traceVerifyLogs: traceVerifyLogs.map((item): TraceVerifyLog => ({
+        id: item.id,
+        traceCodeId: item.traceCodeId,
+        verifyAt: toIsoString(item.verifyAt, now),
+        isValid: item.isValid,
+        clientIp: asOptionalString(item.clientIp),
+        userAgent: asOptionalString(item.userAgent),
       })),
-      auditLogs: auditLogsResult.rows.map((row: DbRow) => ({
-        id: asString(row.id),
-        actorUserId: asOptionalString(row.actor_user_id),
-        action: asString(row.action),
-        entityType: asString(row.entity_type),
-        entityId: asOptionalString(row.entity_id),
-        detail:
-          row.detail && typeof row.detail === "object" && !Array.isArray(row.detail)
-            ? (row.detail as Record<string, unknown>)
-            : {},
-        createdAt: asIsoString(row.created_at, now),
+      auditLogs: auditLogs.map((item): AuditLog => ({
+        id: item.id,
+        actorUserId: asOptionalString(item.actorUserId),
+        action: item.action,
+        entityType: item.entityType,
+        entityId: asOptionalString(item.entityId),
+        detail: normalizeJsonObject(item.detail),
+        createdAt: toIsoString(item.createdAt, now),
       })),
     };
   }
 
-  private async writeDbToPostgres(db: Database): Promise<void> {
-    await this.withPgClient(async (client) => {
-      const run = (sql: string, params?: unknown[]) => client.query(sql, params);
+  private async applyIncrementalWrite(previousDb: Database, nextDb: Database): Promise<void> {
+    const adminUserDiff = buildDiffById(previousDb.adminUsers, nextDb.adminUsers);
+    const adminSessionDiff = buildDiffById(previousDb.adminSessions, nextDb.adminSessions);
+    const mediaAssetDiff = buildDiffById(previousDb.mediaAssets, nextDb.mediaAssets);
+    const companyDiff = buildDiffById(previousDb.companies, nextDb.companies);
+    const productDiff = buildDiffById(previousDb.products, nextDb.products);
+    const productImageDiff = buildDiffById(previousDb.productImages, nextDb.productImages);
+    const inspectionReportDiff = buildDiffById(previousDb.inspectionReports, nextDb.inspectionReports);
+    const inspectionDiff = buildDiffById(previousDb.inspections, nextDb.inspections);
+    const inspectionImageDiff = buildDiffById(previousDb.inspectionImages, nextDb.inspectionImages);
+    const inspectionEventDiff = buildDiffById(previousDb.inspectionEvents, nextDb.inspectionEvents);
+    const tracePageDiff = buildDiffById(previousDb.tracePages, nextDb.tracePages);
+    const traceCodeDiff = buildDiffById(previousDb.traceCodes, nextDb.traceCodes);
+    const traceEventDiff = buildDiffById(previousDb.traceEvents, nextDb.traceEvents);
+    const traceVerifyLogDiff = buildDiffById(previousDb.traceVerifyLogs, nextDb.traceVerifyLogs);
+    const auditLogDiff = buildDiffById(previousDb.auditLogs, nextDb.auditLogs);
 
-      await run("BEGIN");
+    const previousTracePageBanners = this.buildTracePageBannerRows(previousDb.tracePages);
+    const nextTracePageBanners = this.buildTracePageBannerRows(nextDb.tracePages);
+    const tracePageBannerDiff = buildDiffById(previousTracePageBanners, nextTracePageBanners);
 
-      try {
-        await run(`
-          TRUNCATE TABLE
-            audit_logs,
-            trace_verify_logs,
-            trace_events,
-            trace_codes,
-            trace_page_banners,
-            trace_pages,
-            inspection_events,
-            inspection_images,
-            inspections,
-            inspection_reports,
-            product_images,
-            products,
-            companies,
-            media_assets,
-            admin_sessions,
-            admin_users
-          RESTART IDENTITY CASCADE
-        `);
+    await this.prisma.$transaction(async (tx) => {
+      // Delete phase (child to parent)
+      if (auditLogDiff.toDeleteIds.length > 0) {
+        await tx.auditLog.deleteMany({ where: { id: { in: auditLogDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.adminUsers) {
-          await run(
-            `
-              INSERT INTO admin_users (
-                id, username, password, display_name, role, status, created_at, updated_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-            `,
-            [
-              item.id,
-              item.username,
-              item.password,
-              item.displayName,
-              item.role,
-              item.status,
-              item.createdAt,
-              item.updatedAt,
-            ]
-          );
-        }
+      if (traceVerifyLogDiff.toDeleteIds.length > 0) {
+        await tx.traceVerifyLog.deleteMany({ where: { id: { in: traceVerifyLogDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.adminSessions) {
-          await run(
-            `
-              INSERT INTO admin_sessions (
-                id, token, user_id, expires_at, last_used_at, revoked_at, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7)
-            `,
-            [
-              item.id,
-              item.token,
-              item.userId,
-              item.expiresAt ?? null,
-              item.lastUsedAt ?? null,
-              item.revokedAt ?? null,
-              item.createdAt,
-            ]
-          );
-        }
+      if (traceEventDiff.toDeleteIds.length > 0) {
+        await tx.traceEvent.deleteMany({ where: { id: { in: traceEventDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.mediaAssets) {
-          await run(
-            `
-              INSERT INTO media_assets (
-                id, url, name, mime_type, size_bytes, width, height, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-            `,
-            [
-              item.id,
-              item.url,
-              item.name,
-              item.mimeType,
-              item.sizeBytes,
-              item.width ?? null,
-              item.height ?? null,
-              item.createdAt,
-            ]
-          );
-        }
+      if (tracePageBannerDiff.toDeleteIds.length > 0) {
+        await tx.tracePageBanner.deleteMany({ where: { id: { in: tracePageBannerDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.companies) {
-          await run(
-            `
-              INSERT INTO companies (
-                id, name, short_name, phone, address, description_html, logo_asset_id,
-                status, created_at, updated_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-            `,
-            [
-              item.id,
-              item.name,
-              item.shortName ?? null,
-              item.phone ?? null,
-              item.address ?? null,
-              item.descriptionHtml ?? null,
-              item.logoAssetId ?? null,
-              item.status,
-              item.createdAt,
-              item.updatedAt,
-            ]
-          );
-        }
+      if (inspectionEventDiff.toDeleteIds.length > 0) {
+        await tx.inspectionEvent.deleteMany({ where: { id: { in: inspectionEventDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.products) {
-          await run(
-            `
-              INSERT INTO products (
-                id, sku, name, brand, model, material, summary, product_info_html,
-                company_id, status, published_at, created_at, updated_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-            `,
-            [
-              item.id,
-              item.sku ?? null,
-              item.name,
-              item.brand ?? null,
-              item.model ?? null,
-              item.material ?? null,
-              item.summary ?? null,
-              item.productInfoHtml ?? null,
-              item.companyId,
-              item.status,
-              item.publishedAt ?? null,
-              item.createdAt,
-              item.updatedAt,
-            ]
-          );
-        }
+      if (inspectionImageDiff.toDeleteIds.length > 0) {
+        await tx.inspectionImage.deleteMany({ where: { id: { in: inspectionImageDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.productImages) {
-          await run(
-            `
-              INSERT INTO product_images (
-                id, product_id, asset_id, scene, sort_order, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6)
-              ON CONFLICT (product_id, asset_id, scene) DO NOTHING
-            `,
-            [item.id, item.productId, item.assetId, item.scene, item.sortOrder, item.createdAt]
-          );
-        }
+      if (productImageDiff.toDeleteIds.length > 0) {
+        await tx.productImage.deleteMany({ where: { id: { in: productImageDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.inspectionReports) {
-          await run(
-            `
-              INSERT INTO inspection_reports (
-                id, product_id, consignor_name, inspection_date, conclusion, notes, raw_html,
-                created_at, updated_at
-              ) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9)
-            `,
-            [
-              item.id,
-              item.productId,
-              item.consignorName ?? null,
-              item.inspectionDate ?? null,
-              item.conclusion ?? null,
-              JSON.stringify(item.notes ?? []),
-              item.rawHtml ?? null,
-              item.createdAt,
-              item.updatedAt,
-            ]
-          );
-        }
+      if (adminSessionDiff.toDeleteIds.length > 0) {
+        await tx.adminSession.deleteMany({ where: { id: { in: adminSessionDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.inspections) {
-          await run(
-            `
-              INSERT INTO inspections (
-                id, sn, product_id, company_id, inspection_time, result, status, conclusion,
-                created_at, updated_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-            `,
-            [
-              item.id,
-              item.sn,
-              item.productId,
-              item.companyId,
-              item.inspectionTime,
-              item.result,
-              item.status,
-              item.conclusion ?? null,
-              item.createdAt,
-              item.updatedAt,
-            ]
-          );
-        }
+      if (traceCodeDiff.toDeleteIds.length > 0) {
+        await tx.traceCode.deleteMany({ where: { id: { in: traceCodeDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.inspectionImages) {
-          await run(
-            `
-              INSERT INTO inspection_images (
-                id, inspection_id, asset_id, scene, sort_order, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6)
-              ON CONFLICT (inspection_id, asset_id, scene) DO NOTHING
-            `,
-            [item.id, item.inspectionId, item.assetId, item.scene, item.sortOrder, item.createdAt]
-          );
-        }
+      if (tracePageDiff.toDeleteIds.length > 0) {
+        await tx.tracePage.deleteMany({ where: { id: { in: tracePageDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.inspectionEvents) {
-          await run(
-            `
-              INSERT INTO inspection_events (
-                id, inspection_id, event_time, event_type, title, content, sort_order, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-            `,
-            [
-              item.id,
-              item.inspectionId,
-              item.eventTime,
-              item.eventType,
-              item.title,
-              item.content ?? null,
-              item.sortOrder,
-              item.createdAt,
-            ]
-          );
-        }
+      if (inspectionDiff.toDeleteIds.length > 0) {
+        await tx.inspection.deleteMany({ where: { id: { in: inspectionDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.tracePages) {
-          await run(
-            `
-              INSERT INTO trace_pages (
-                id, sn, consignor_name, inspection_date, trace_content, status, created_at, updated_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-            `,
-            [
-              item.id,
-              item.sn,
-              item.consignorName ?? null,
-              item.inspectionDate ?? null,
-              item.traceContent ?? null,
-              item.status,
-              item.createdAt,
-              item.updatedAt,
-            ]
-          );
+      if (inspectionReportDiff.toDeleteIds.length > 0) {
+        await tx.inspectionReport.deleteMany({ where: { id: { in: inspectionReportDiff.toDeleteIds } } });
+      }
 
-          const bannerAssetIds = parseCsv(item.indexBannerAssetIdsCsv);
-          for (let index = 0; index < bannerAssetIds.length; index += 1) {
-            const assetId = bannerAssetIds[index];
-            await run(
-              `
-                INSERT INTO trace_page_banners (
-                  id, trace_page_id, asset_id, sort_order, created_at
-                ) VALUES ($1,$2,$3,$4,$5)
-                ON CONFLICT (trace_page_id, asset_id) DO NOTHING
-              `,
-              [`${item.id}-banner-${index}`, item.id, assetId, index, item.createdAt]
-            );
-          }
-        }
+      if (productDiff.toDeleteIds.length > 0) {
+        await tx.product.deleteMany({ where: { id: { in: productDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.traceCodes) {
-          await run(
-            `
-              INSERT INTO trace_codes (
-                id, code, product_id, verify_status, verify_count,
-                first_verified_at, last_verified_at, expires_at, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-            `,
-            [
-              item.id,
-              item.code,
-              item.productId,
-              item.verifyStatus,
-              item.verifyCount,
-              item.firstVerifiedAt ?? null,
-              item.lastVerifiedAt ?? null,
-              item.expiresAt ?? null,
-              item.createdAt,
-            ]
-          );
-        }
+      if (companyDiff.toDeleteIds.length > 0) {
+        await tx.company.deleteMany({ where: { id: { in: companyDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.traceEvents) {
-          await run(
-            `
-              INSERT INTO trace_events (
-                id, trace_code_id, event_time, event_type, title, content, sort_order, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-            `,
-            [
-              item.id,
-              item.traceCodeId,
-              item.eventTime,
-              item.eventType,
-              item.title,
-              item.content ?? null,
-              item.sortOrder,
-              item.createdAt,
-            ]
-          );
-        }
+      if (mediaAssetDiff.toDeleteIds.length > 0) {
+        await tx.mediaAsset.deleteMany({ where: { id: { in: mediaAssetDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.traceVerifyLogs) {
-          await run(
-            `
-              INSERT INTO trace_verify_logs (
-                id, trace_code_id, verify_at, is_valid, client_ip, user_agent, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6,$7)
-            `,
-            [
-              item.id,
-              item.traceCodeId,
-              item.verifyAt,
-              item.isValid,
-              item.clientIp ?? null,
-              item.userAgent ?? null,
-              item.verifyAt,
-            ]
-          );
-        }
+      if (adminUserDiff.toDeleteIds.length > 0) {
+        await tx.adminUser.deleteMany({ where: { id: { in: adminUserDiff.toDeleteIds } } });
+      }
 
-        for (const item of db.auditLogs) {
-          await run(
-            `
-              INSERT INTO audit_logs (
-                id, actor_user_id, action, entity_type, entity_id, detail, created_at
-              ) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
-            `,
-            [
-              item.id,
-              item.actorUserId ?? null,
-              item.action,
-              item.entityType,
-              item.entityId ?? null,
-              JSON.stringify(item.detail ?? {}),
-              item.createdAt,
-            ]
-          );
-        }
+      // Upsert phase (parent to child)
+      for (const item of adminUserDiff.toUpsert) {
+        await tx.adminUser.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            username: item.username,
+            password: item.password,
+            displayName: item.displayName,
+            role: item.role,
+            status: item.status,
+            createdAt: toDate(item.createdAt),
+            updatedAt: toDate(item.updatedAt),
+          },
+          update: {
+            username: item.username,
+            password: item.password,
+            displayName: item.displayName,
+            role: item.role,
+            status: item.status,
+            updatedAt: toDate(item.updatedAt),
+          },
+        });
+      }
 
-        await run("COMMIT");
-      } catch (error) {
-        await run("ROLLBACK");
-        throw error;
+      for (const item of mediaAssetDiff.toUpsert) {
+        await tx.mediaAsset.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            url: item.url,
+            name: item.name,
+            mimeType: item.mimeType,
+            sizeBytes: BigInt(asNumber(item.sizeBytes, 0)),
+            width: item.width ?? null,
+            height: item.height ?? null,
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            url: item.url,
+            name: item.name,
+            mimeType: item.mimeType,
+            sizeBytes: BigInt(asNumber(item.sizeBytes, 0)),
+            width: item.width ?? null,
+            height: item.height ?? null,
+          },
+        });
+      }
+
+      for (const item of companyDiff.toUpsert) {
+        await tx.company.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            name: item.name,
+            shortName: item.shortName ?? null,
+            phone: item.phone ?? null,
+            address: item.address ?? null,
+            descriptionHtml: item.descriptionHtml ?? null,
+            logoAssetId: item.logoAssetId ?? null,
+            status: item.status,
+            createdAt: toDate(item.createdAt),
+            updatedAt: toDate(item.updatedAt),
+          },
+          update: {
+            name: item.name,
+            shortName: item.shortName ?? null,
+            phone: item.phone ?? null,
+            address: item.address ?? null,
+            descriptionHtml: item.descriptionHtml ?? null,
+            logoAssetId: item.logoAssetId ?? null,
+            status: item.status,
+            updatedAt: toDate(item.updatedAt),
+          },
+        });
+      }
+
+      for (const item of productDiff.toUpsert) {
+        await tx.product.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            sku: item.sku ?? null,
+            name: item.name,
+            brand: item.brand ?? null,
+            model: item.model ?? null,
+            material: item.material ?? null,
+            summary: item.summary ?? null,
+            productInfoHtml: item.productInfoHtml ?? null,
+            companyId: item.companyId,
+            status: item.status,
+            publishedAt: toOptionalDate(item.publishedAt),
+            createdAt: toDate(item.createdAt),
+            updatedAt: toDate(item.updatedAt),
+          },
+          update: {
+            sku: item.sku ?? null,
+            name: item.name,
+            brand: item.brand ?? null,
+            model: item.model ?? null,
+            material: item.material ?? null,
+            summary: item.summary ?? null,
+            productInfoHtml: item.productInfoHtml ?? null,
+            companyId: item.companyId,
+            status: item.status,
+            publishedAt: toOptionalDate(item.publishedAt),
+            updatedAt: toDate(item.updatedAt),
+          },
+        });
+      }
+
+      for (const item of inspectionReportDiff.toUpsert) {
+        await tx.inspectionReport.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            productId: item.productId,
+            consignorName: item.consignorName ?? null,
+            inspectionDate: toOptionalDateOnly(item.inspectionDate),
+            conclusion: item.conclusion ?? null,
+            notes: (item.notes ?? []) as Prisma.InputJsonValue,
+            rawHtml: item.rawHtml ?? null,
+            createdAt: toDate(item.createdAt),
+            updatedAt: toDate(item.updatedAt),
+          },
+          update: {
+            productId: item.productId,
+            consignorName: item.consignorName ?? null,
+            inspectionDate: toOptionalDateOnly(item.inspectionDate),
+            conclusion: item.conclusion ?? null,
+            notes: (item.notes ?? []) as Prisma.InputJsonValue,
+            rawHtml: item.rawHtml ?? null,
+            updatedAt: toDate(item.updatedAt),
+          },
+        });
+      }
+
+      for (const item of inspectionDiff.toUpsert) {
+        await tx.inspection.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            sn: item.sn,
+            productId: item.productId,
+            companyId: item.companyId,
+            inspectionTime: toDate(item.inspectionTime),
+            result: item.result,
+            status: item.status,
+            conclusion: item.conclusion ?? null,
+            createdAt: toDate(item.createdAt),
+            updatedAt: toDate(item.updatedAt),
+          },
+          update: {
+            sn: item.sn,
+            productId: item.productId,
+            companyId: item.companyId,
+            inspectionTime: toDate(item.inspectionTime),
+            result: item.result,
+            status: item.status,
+            conclusion: item.conclusion ?? null,
+            updatedAt: toDate(item.updatedAt),
+          },
+        });
+      }
+
+      for (const item of tracePageDiff.toUpsert) {
+        await tx.tracePage.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            sn: item.sn,
+            consignorName: item.consignorName ?? null,
+            inspectionDate: toOptionalDateOnly(item.inspectionDate),
+            traceContent: item.traceContent ?? null,
+            status: item.status,
+            createdAt: toDate(item.createdAt),
+            updatedAt: toDate(item.updatedAt),
+          },
+          update: {
+            sn: item.sn,
+            consignorName: item.consignorName ?? null,
+            inspectionDate: toOptionalDateOnly(item.inspectionDate),
+            traceContent: item.traceContent ?? null,
+            status: item.status,
+            updatedAt: toDate(item.updatedAt),
+          },
+        });
+      }
+
+      for (const item of traceCodeDiff.toUpsert) {
+        await tx.traceCode.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            code: item.code,
+            productId: item.productId,
+            verifyStatus: item.verifyStatus,
+            verifyCount: item.verifyCount,
+            firstVerifiedAt: toOptionalDate(item.firstVerifiedAt),
+            lastVerifiedAt: toOptionalDate(item.lastVerifiedAt),
+            expiresAt: toOptionalDate(item.expiresAt),
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            code: item.code,
+            productId: item.productId,
+            verifyStatus: item.verifyStatus,
+            verifyCount: item.verifyCount,
+            firstVerifiedAt: toOptionalDate(item.firstVerifiedAt),
+            lastVerifiedAt: toOptionalDate(item.lastVerifiedAt),
+            expiresAt: toOptionalDate(item.expiresAt),
+          },
+        });
+      }
+
+      for (const item of productImageDiff.toUpsert) {
+        await tx.productImage.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            productId: item.productId,
+            assetId: item.assetId,
+            scene: item.scene,
+            sortOrder: item.sortOrder,
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            productId: item.productId,
+            assetId: item.assetId,
+            scene: item.scene,
+            sortOrder: item.sortOrder,
+          },
+        });
+      }
+
+      for (const item of inspectionImageDiff.toUpsert) {
+        await tx.inspectionImage.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            inspectionId: item.inspectionId,
+            assetId: item.assetId,
+            scene: item.scene,
+            sortOrder: item.sortOrder,
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            inspectionId: item.inspectionId,
+            assetId: item.assetId,
+            scene: item.scene,
+            sortOrder: item.sortOrder,
+          },
+        });
+      }
+
+      for (const item of inspectionEventDiff.toUpsert) {
+        await tx.inspectionEvent.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            inspectionId: item.inspectionId,
+            eventTime: toDate(item.eventTime),
+            eventType: item.eventType,
+            title: item.title,
+            content: item.content ?? null,
+            sortOrder: item.sortOrder,
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            inspectionId: item.inspectionId,
+            eventTime: toDate(item.eventTime),
+            eventType: item.eventType,
+            title: item.title,
+            content: item.content ?? null,
+            sortOrder: item.sortOrder,
+          },
+        });
+      }
+
+      for (const item of traceEventDiff.toUpsert) {
+        await tx.traceEvent.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            traceCodeId: item.traceCodeId,
+            eventTime: toDate(item.eventTime),
+            eventType: item.eventType,
+            title: item.title,
+            content: item.content ?? null,
+            sortOrder: item.sortOrder,
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            traceCodeId: item.traceCodeId,
+            eventTime: toDate(item.eventTime),
+            eventType: item.eventType,
+            title: item.title,
+            content: item.content ?? null,
+            sortOrder: item.sortOrder,
+          },
+        });
+      }
+
+      for (const item of traceVerifyLogDiff.toUpsert) {
+        await tx.traceVerifyLog.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            traceCodeId: item.traceCodeId,
+            verifyAt: toDate(item.verifyAt),
+            isValid: Boolean(item.isValid),
+            clientIp: item.clientIp ?? null,
+            userAgent: item.userAgent ?? null,
+            createdAt: toDate(item.verifyAt),
+          },
+          update: {
+            traceCodeId: item.traceCodeId,
+            verifyAt: toDate(item.verifyAt),
+            isValid: Boolean(item.isValid),
+            clientIp: item.clientIp ?? null,
+            userAgent: item.userAgent ?? null,
+          },
+        });
+      }
+
+      for (const item of auditLogDiff.toUpsert) {
+        await tx.auditLog.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            actorUserId: item.actorUserId ?? null,
+            action: item.action,
+            entityType: item.entityType,
+            entityId: item.entityId ?? null,
+            detail: normalizeJsonObject(item.detail) as Prisma.InputJsonValue,
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            actorUserId: item.actorUserId ?? null,
+            action: item.action,
+            entityType: item.entityType,
+            entityId: item.entityId ?? null,
+            detail: normalizeJsonObject(item.detail) as Prisma.InputJsonValue,
+          },
+        });
+      }
+
+      for (const item of adminSessionDiff.toUpsert) {
+        await tx.adminSession.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            token: item.token,
+            userId: item.userId,
+            expiresAt: toOptionalDate(item.expiresAt),
+            lastUsedAt: toOptionalDate(item.lastUsedAt),
+            revokedAt: toOptionalDate(item.revokedAt),
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            token: item.token,
+            userId: item.userId,
+            expiresAt: toOptionalDate(item.expiresAt),
+            lastUsedAt: toOptionalDate(item.lastUsedAt),
+            revokedAt: toOptionalDate(item.revokedAt),
+          },
+        });
+      }
+
+      for (const item of tracePageBannerDiff.toUpsert) {
+        await tx.tracePageBanner.upsert({
+          where: { id: item.id },
+          create: {
+            id: item.id,
+            tracePageId: item.tracePageId,
+            assetId: item.assetId,
+            sortOrder: item.sortOrder,
+            createdAt: toDate(item.createdAt),
+          },
+          update: {
+            tracePageId: item.tracePageId,
+            assetId: item.assetId,
+            sortOrder: item.sortOrder,
+          },
+        });
       }
     });
   }
 
-  private getSessionExpiresAt(): string | undefined {
-    if (!Number.isFinite(this.adminSessionTtlHours) || this.adminSessionTtlHours <= 0) {
-      return undefined;
-    }
-
-    return new Date(Date.now() + this.adminSessionTtlHours * 60 * 60 * 1000).toISOString();
+  async writeDb(db: Database): Promise<void> {
+    await this.withWriteLock(async () => {
+      const previousDb = await this.readDb();
+      await this.applyIncrementalWrite(previousDb, db);
+    });
   }
 
-  private isSessionExpired(expiresAt?: string, referenceTimeIso = this.nowIso()): boolean {
-    if (!expiresAt) {
-      return false;
-    }
-
-    const expiresAtMs = new Date(expiresAt).getTime();
-    const referenceMs = new Date(referenceTimeIso).getTime();
-
-    if (Number.isNaN(expiresAtMs) || Number.isNaN(referenceMs)) {
-      return false;
-    }
-
-    return expiresAtMs <= referenceMs;
+  async mutateDb<T>(mutator: (db: Database) => T): Promise<T> {
+    return this.withWriteLock(async () => {
+      const previousDb = await this.readDb();
+      const nextDb = this.cloneDb(previousDb);
+      const result = mutator(nextDb);
+      await this.applyIncrementalWrite(previousDb, nextDb);
+      return result;
+    });
   }
 
   async createAdminSession(userId: string): Promise<string> {
     const normalizedUserId = asString(userId).trim();
-
     if (!normalizedUserId) {
       throw new Error("userId is required");
     }
 
-    const token = `ccic_${randomUUID()}`;
-    const now = this.nowIso();
-    const expiresAt = this.getSessionExpiresAt();
+    const token = `ccic_${randomBytes(32).toString("hex")}`;
+    const now = new Date();
 
-    if (!this.pgPool) {
-      await this.mutateDb((db) => {
-        db.adminSessions.unshift({
-          id: this.newId(),
-          token,
-          userId: normalizedUserId,
-          expiresAt,
-          lastUsedAt: now,
-          createdAt: now,
-        });
-      });
-
-      return token;
-    }
-
-    await this.pgPool.query(
-      `
-        INSERT INTO admin_sessions (
-          id, token, user_id, expires_at, last_used_at, created_at
-        ) VALUES ($1,$2,$3,$4,$5,$6)
-      `,
-      [this.newId(), token, normalizedUserId, expiresAt ?? null, now, now]
-    );
+    await this.prisma.adminSession.create({
+      data: {
+        id: this.newId(),
+        token,
+        userId: normalizedUserId,
+        expiresAt: this.getSessionExpiresAt(),
+        lastUsedAt: now,
+        createdAt: now,
+      },
+    });
 
     return token;
   }
 
   async getAdminSessionUserId(token: string): Promise<string | undefined> {
-    const normalizedToken = asString(token).trim();
-
+    const normalizedToken = normalizeToken(token);
     if (!normalizedToken) {
       return undefined;
     }
 
-    const now = this.nowIso();
+    const now = new Date();
+    const session = await this.prisma.adminSession.findUnique({
+      where: { token: normalizedToken },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        revokedAt: true,
+      },
+    });
 
-    if (!this.pgPool) {
-      let userId: string | undefined;
-
-      await this.mutateDb((db) => {
-        const session = db.adminSessions.find((item) => item.token === normalizedToken);
-
-        if (!session || session.revokedAt) {
-          return;
-        }
-
-        if (this.isSessionExpired(session.expiresAt, now)) {
-          session.revokedAt = now;
-          return;
-        }
-
-        session.lastUsedAt = now;
-        userId = session.userId;
-      });
-
-      return userId;
+    if (!session || session.revokedAt) {
+      return undefined;
     }
 
-    await this.pgPool.query(
-      `
-        UPDATE admin_sessions
-        SET revoked_at = COALESCE(revoked_at, $2::timestamptz)
-        WHERE token = $1
-          AND revoked_at IS NULL
-          AND expires_at IS NOT NULL
-          AND expires_at <= $2::timestamptz
-      `,
-      [normalizedToken, now]
-    );
+    if (session.expiresAt && session.expiresAt.getTime() <= now.getTime()) {
+      await this.prisma.adminSession.update({
+        where: { id: session.id },
+        data: { revokedAt: now },
+      });
+      return undefined;
+    }
 
-    const result = await this.pgPool.query<DbRow>(
-      `
-        UPDATE admin_sessions
-        SET last_used_at = $2::timestamptz
-        WHERE token = $1
-          AND revoked_at IS NULL
-          AND (expires_at IS NULL OR expires_at > $2::timestamptz)
-        RETURNING user_id
-      `,
-      [normalizedToken, now]
-    );
+    await this.prisma.adminSession.update({
+      where: { id: session.id },
+      data: { lastUsedAt: now },
+    });
 
-    return asOptionalString(result.rows[0]?.user_id);
+    return session.userId;
   }
 
   async revokeAdminSession(token: string): Promise<void> {
-    const normalizedToken = asString(token).trim();
-
+    const normalizedToken = normalizeToken(token);
     if (!normalizedToken) {
       return;
     }
 
-    const now = this.nowIso();
+    await this.prisma.adminSession.updateMany({
+      where: {
+        token: normalizedToken,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+  }
 
-    if (!this.pgPool) {
-      await this.mutateDb((db) => {
-        const session = db.adminSessions.find((item) => item.token === normalizedToken);
+  async cleanupExpiredAdminSessions(): Promise<number> {
+    const now = new Date();
 
-        if (!session || session.revokedAt) {
-          return;
-        }
+    await this.prisma.adminSession.updateMany({
+      where: {
+        revokedAt: null,
+        expiresAt: {
+          not: null,
+          lte: now,
+        },
+      },
+      data: {
+        revokedAt: now,
+      },
+    });
 
-        session.revokedAt = now;
+    const deleteConditions: Prisma.AdminSessionWhereInput[] = [
+      {
+        expiresAt: {
+          not: null,
+          lte: now,
+        },
+      },
+    ];
+
+    if (Number.isFinite(this.revokedSessionRetentionHours) && this.revokedSessionRetentionHours > 0) {
+      const cutoff = new Date(now.getTime() - this.revokedSessionRetentionHours * 60 * 60 * 1000);
+      deleteConditions.push({
+        revokedAt: {
+          not: null,
+          lte: cutoff,
+        },
       });
+    } else {
+      deleteConditions.push({
+        revokedAt: {
+          not: null,
+        },
+      });
+    }
 
+    const deleted = await this.prisma.adminSession.deleteMany({
+      where: {
+        OR: deleteConditions,
+      },
+    });
+
+    if (deleted.count > 0) {
+      this.logger.log(`Cleaned ${deleted.count} expired/revoked admin sessions`);
+    }
+
+    return deleted.count;
+  }
+
+  async findAdminUserByUsername(username: string): Promise<AdminUser | undefined> {
+    const normalizedUsername = asString(username).trim();
+    if (!normalizedUsername) {
+      return undefined;
+    }
+
+    const item = await this.prisma.adminUser.findUnique({
+      where: { username: normalizedUsername },
+    });
+
+    if (!item) {
+      return undefined;
+    }
+
+    return this.toAdminUser(item, this.nowIso());
+  }
+
+  async findActiveAdminUserById(userId: string): Promise<AdminUser | undefined> {
+    const normalizedUserId = asString(userId).trim();
+    if (!normalizedUserId) {
+      return undefined;
+    }
+
+    const item = await this.prisma.adminUser.findFirst({
+      where: {
+        id: normalizedUserId,
+        status: "ACTIVE",
+      },
+    });
+
+    if (!item) {
+      return undefined;
+    }
+
+    return this.toAdminUser(item, this.nowIso());
+  }
+
+  async updateAdminUserPassword(userId: string, passwordHash: string): Promise<void> {
+    const normalizedUserId = asString(userId).trim();
+    const normalizedHash = asString(passwordHash).trim();
+    if (!normalizedUserId || !normalizedHash) {
       return;
     }
 
-    await this.pgPool.query(
-      `
-        UPDATE admin_sessions
-        SET revoked_at = COALESCE(revoked_at, $2::timestamptz)
-        WHERE token = $1
-      `,
-      [normalizedToken, now]
-    );
+    await this.prisma.adminUser.update({
+      where: { id: normalizedUserId },
+      data: {
+        password: normalizedHash,
+        updatedAt: new Date(),
+      },
+    });
   }
 
-  async readDb(): Promise<Database> {
-    if (!this.pgPool) {
-      return this.readJsonDb();
-    }
-
-    try {
-      return await this.readDbFromPostgres();
-    } catch (error) {
-      this.logger.warn("Failed to read PostgreSQL, fallback to JSON data", error as Error);
-      return this.readJsonDb();
-    }
-  }
-
-  async writeDb(db: Database): Promise<void> {
-    if (!this.pgPool) {
-      await this.writeJsonDb(db);
+  async touchAdminUserLastLogin(userId: string): Promise<void> {
+    const normalizedUserId = asString(userId).trim();
+    if (!normalizedUserId) {
       return;
     }
 
-    await this.writeDbToPostgres(db);
-  }
-
-  async mutateDb<T>(mutator: (db: Database) => T): Promise<T> {
-    const db = await this.readDb();
-    const result = mutator(db);
-    await this.writeDb(db);
-    return result;
+    const now = new Date();
+    await this.prisma.adminUser.update({
+      where: { id: normalizedUserId },
+      data: {
+        lastLoginAt: now,
+        updatedAt: now,
+      },
+    });
   }
 
   nowIso() {

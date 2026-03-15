@@ -2,3 +2,9 @@ node_modules
 dist
 .vscode
 .DS_Store
+.env
+.env.*
+!.env.example
+apps/api/.env
+apps/api/.env.*
+!apps/api/.env.example

@@ -2,6 +2,7 @@ import { Client } from "pg";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import bcrypt from "bcryptjs";
 
 const publishStatuses = new Set(["DRAFT", "PUBLISHED", "ARCHIVED"]);
 const verifyStatuses = new Set(["VALID", "INVALID", "EXPIRED", "REVOKED"]);
@@ -18,6 +19,7 @@ const inspectionEventTypes = new Set([
   "PUBLISHED",
   "OTHER",
 ]);
+const bcryptHashPattern = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 
 const asArray = (value) => (Array.isArray(value) ? value : []);
 
@@ -71,6 +73,15 @@ const parseCsv = (value) =>
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+
+const toAdminPasswordHash = async (value) => {
+  const raw = String(value ?? "").trim() || "admin123";
+  if (bcryptHashPattern.test(raw)) {
+    return raw;
+  }
+
+  return bcrypt.hash(raw, 12);
+};
 
 async function main() {
   if (!process.env.DATABASE_URL) {
@@ -143,6 +154,8 @@ async function main() {
         continue;
       }
 
+      const passwordHash = await toAdminPasswordHash(item.password);
+
       await client.query(
         `
           INSERT INTO admin_users (
@@ -152,7 +165,7 @@ async function main() {
         [
           id,
           String(item.username ?? "").trim(),
-          String(item.password ?? "").trim() || "admin123",
+          passwordHash,
           String(item.displayName ?? item.display_name ?? item.username ?? "admin").trim() || "admin",
           normalizeStatus(item.role, new Set(["SUPER_ADMIN", "EDITOR", "VIEWER"]), "EDITOR"),
           normalizeStatus(item.status, new Set(["ACTIVE", "DISABLED"]), "ACTIVE"),

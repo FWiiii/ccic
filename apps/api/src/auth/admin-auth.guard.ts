@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import type { Request } from "express";
 import { DatabaseService } from "../database/database.service";
+import { extractBearerToken } from "./auth.util";
 import { TokenService } from "./token.service";
 
 declare module "express-serve-static-core" {
@@ -18,16 +19,14 @@ export class AdminAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<Request>();
-    const auth = req.header("authorization");
-    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : "";
+    const token = extractBearerToken(req.header("authorization"));
     const userId = await this.tokenService.getUserId(token);
 
     if (!userId) {
       throw new HttpException({ message: "Unauthorized" }, HttpStatus.UNAUTHORIZED);
     }
 
-    const db = await this.databaseService.readDb();
-    const user = db.adminUsers.find((item) => item.id === userId && item.status === "ACTIVE");
+    const user = await this.databaseService.findActiveAdminUserById(userId);
 
     if (!user) {
       throw new HttpException({ message: "Invalid user" }, HttpStatus.UNAUTHORIZED);
