@@ -7,77 +7,90 @@ interface UseInspectionQueryOptions {
   isFeedbackPage: boolean;
 }
 
+export type InspectionQueryStatus = "idle" | "loading" | "success" | "not_found" | "error";
+
+interface InspectionQueryState {
+  status: InspectionQueryStatus;
+  inspectionData: PublicInspectionData | null;
+  errorMessage: string;
+}
+
 export function useInspectionQuery({ querySn, isSearchPage, isFeedbackPage }: UseInspectionQueryOptions) {
-  const [inspectionData, setInspectionData] = useState<PublicInspectionData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [showTraceNotFoundPage, setShowTraceNotFoundPage] = useState(false);
+  const [state, setState] = useState<InspectionQueryState>({
+    status: "idle",
+    inspectionData: null,
+    errorMessage: "",
+  });
 
   useEffect(() => {
     if (isSearchPage || isFeedbackPage) {
-      setIsLoading(false);
-      setErrorMessage("");
-      setShowTraceNotFoundPage(false);
+      setState((prev) => ({
+        ...prev,
+        status: "idle",
+        errorMessage: "",
+      }));
       return;
     }
 
     const sn = querySn.trim();
 
     if (!sn) {
-      setInspectionData(null);
-      setShowTraceNotFoundPage(false);
-      setErrorMessage("链接缺少 sn 参数，请检查二维码地址。");
-      setIsLoading(false);
+      setState({
+        status: "error",
+        inspectionData: null,
+        errorMessage: "\u94fe\u63a5\u7f3a\u5c11 sn \u53c2\u6570\uff0c\u8bf7\u68c0\u67e5\u4e8c\u7ef4\u7801\u5730\u5740\u3002",
+      });
       return;
     }
 
     const abortController = new AbortController();
 
-    setIsLoading(true);
-    setErrorMessage("");
-    setShowTraceNotFoundPage(false);
+    setState((prev) => ({
+      ...prev,
+      status: "loading",
+      errorMessage: "",
+    }));
 
     fetchInspectionBySn(sn, abortController.signal)
       .then((data) => {
-        setInspectionData(data);
-        setShowTraceNotFoundPage(false);
-        setErrorMessage("");
+        setState({
+          status: "success",
+          inspectionData: data,
+          errorMessage: "",
+        });
       })
       .catch((error) => {
         if (abortController.signal.aborted) {
           return;
         }
 
-        setInspectionData(null);
-
         const isInspectionNotFound =
           (error instanceof PublicInspectionRequestError && error.status === 404) ||
           (error instanceof Error && /inspection not found/i.test(error.message));
 
         if (isInspectionNotFound) {
-          setShowTraceNotFoundPage(true);
-          setErrorMessage("");
+          setState({
+            status: "not_found",
+            inspectionData: null,
+            errorMessage: "",
+          });
           return;
         }
 
         const message =
-          error instanceof Error && error.message ? error.message : "查询失败，请稍后重试。";
-        setShowTraceNotFoundPage(false);
-        setErrorMessage(message);
-      })
-      .finally(() => {
-        if (!abortController.signal.aborted) {
-          setIsLoading(false);
-        }
+          error instanceof Error && error.message
+            ? error.message
+            : "\u67e5\u8be2\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+
+        setState({
+          status: "error",
+          inspectionData: null,
+          errorMessage: message,
+        });
       });
 
     return () => abortController.abort();
   }, [querySn, isSearchPage, isFeedbackPage]);
 
-  return {
-    inspectionData,
-    isLoading,
-    errorMessage,
-    showTraceNotFoundPage,
-  };
+  return state;
 }
