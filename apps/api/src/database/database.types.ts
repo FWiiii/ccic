@@ -31,6 +31,7 @@ export interface Product {
   name: string;
   brand?: string;
   model?: string;
+  material?: string;
   summary?: string;
   productInfoHtml?: string;
   companyId: string;

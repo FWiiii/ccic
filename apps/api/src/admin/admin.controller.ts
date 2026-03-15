@@ -370,6 +370,7 @@ export class AdminController {
         name,
         brand: body?.brand ? String(body.brand) : undefined,
         model: body?.model ? String(body.model) : undefined,
+        material: body?.material ? String(body.material) : undefined,
         summary: body?.summary ? String(body.summary) : undefined,
         productInfoHtml: body?.productInfoHtml ? String(body.productInfoHtml) : undefined,
         companyId,
@@ -412,6 +413,10 @@ export class AdminController {
 
       if (body?.model !== undefined) {
         item.model = String(body.model);
+      }
+
+      if (body?.material !== undefined) {
+        item.material = String(body.material);
       }
 
       if (body?.summary !== undefined) {

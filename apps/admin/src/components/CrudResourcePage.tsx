@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   useCreate,
   useCustomMutation,
@@ -27,6 +27,12 @@ export interface FieldOption {
   value: string;
 }
 
+export interface CrudFilter {
+  field: string;
+  operator?: "eq" | "contains";
+  value: unknown;
+}
+
 export interface CrudFieldConfig {
   key: string;
   label: string;
@@ -39,11 +45,27 @@ export interface CrudFieldConfig {
   tableRender?: (value: unknown, record: Record<string, unknown>) => ReactNode;
 }
 
+export interface CrudSubmitContext {
+  mode: "create" | "edit";
+  recordId?: string;
+  formValues: Record<string, unknown>;
+  requestPayload: Record<string, unknown>;
+  savedRecord?: Record<string, unknown>;
+}
+
 export interface CrudResourcePageProps {
   title: string;
   resource: string;
   fields: CrudFieldConfig[];
   publishResource?: "products" | "companies";
+  permanentFilters?: CrudFilter[];
+  submitOverrides?: Record<string, unknown>;
+  createInitialValues?: Record<string, unknown>;
+  syncWithLocation?: boolean;
+  loadEditFormValues?: (
+    record: Record<string, unknown>
+  ) => Promise<Record<string, unknown> | void> | Record<string, unknown> | void;
+  onAfterSubmit?: (context: CrudSubmitContext) => Promise<void> | void;
 }
 
 function renderCellValue(value: unknown) {
@@ -63,10 +85,17 @@ export function CrudResourcePage({
   resource,
   fields,
   publishResource,
+  permanentFilters,
+  submitOverrides,
+  createInitialValues,
+  syncWithLocation = true,
+  loadEditFormValues,
+  onAfterSubmit,
 }: CrudResourcePageProps) {
   const [form] = Form.useForm();
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Record<string, unknown> | null>(null);
+  const [loadingFormValues, setLoadingFormValues] = useState(false);
 
   const { tableProps, tableQueryResult } = useTable<Record<string, unknown>>({
     resource,
@@ -74,7 +103,16 @@ export function CrudResourcePage({
       mode: "server",
       pageSize: 10,
     },
-    syncWithLocation: true,
+    syncWithLocation,
+    filters: permanentFilters?.length
+      ? {
+          permanent: permanentFilters.map((item) => ({
+            field: item.field,
+            operator: item.operator ?? "eq",
+            value: item.value,
+          })),
+        }
+      : undefined,
   });
 
   const { mutateAsync: createMutate, isLoading: creating } = useCreate();
@@ -91,10 +129,15 @@ export function CrudResourcePage({
   const openCreate = () => {
     setEditingRecord(null);
     form.resetFields();
+
+    if (createInitialValues) {
+      form.setFieldsValue(createInitialValues);
+    }
+
     setModalOpen(true);
   };
 
-  const openEdit = (record: Record<string, unknown>) => {
+  const openEdit = async (record: Record<string, unknown>) => {
     setEditingRecord(record);
 
     const initialValues = fields.reduce<Record<string, unknown>>((result, field) => {
@@ -104,6 +147,22 @@ export function CrudResourcePage({
 
     form.setFieldsValue(initialValues);
     setModalOpen(true);
+
+    if (!loadEditFormValues) {
+      return;
+    }
+
+    setLoadingFormValues(true);
+    try {
+      const extraValues = await loadEditFormValues(record);
+      if (extraValues && Object.keys(extraValues).length) {
+        form.setFieldsValue({ ...initialValues, ...extraValues });
+      }
+    } catch {
+      message.error("\u52a0\u8f7d\u7f16\u8f91\u6570\u636e\u5931\u8d25");
+    } finally {
+      setLoadingFormValues(false);
+    }
   };
 
   const submitForm = async (values: Record<string, unknown>) => {
@@ -124,31 +183,54 @@ export function CrudResourcePage({
       return result;
     }, {});
 
-    if (editingRecord?.id) {
-      await updateMutate({
-        resource,
-        id: String(editingRecord.id),
-        values: payload,
-      });
+    const requestPayload = {
+      ...payload,
+      ...(submitOverrides ?? {}),
+    };
 
-      message.success("更新成功");
+    const mode: CrudSubmitContext["mode"] = editingRecord?.id ? "edit" : "create";
+    let savedRecord: Record<string, unknown> | undefined;
+    let recordId: string | undefined;
+
+    if (mode === "edit") {
+      const result = (await updateMutate({
+        resource,
+        id: String(editingRecord?.id),
+        values: requestPayload,
+      })) as { data?: Record<string, unknown> };
+
+      savedRecord = result?.data;
+      recordId = String(editingRecord?.id ?? "").trim() || undefined;
     } else {
-      await createMutate({
+      const result = (await createMutate({
         resource,
-        values: payload,
-      });
+        values: requestPayload,
+      })) as { data?: Record<string, unknown> };
 
-      message.success("创建成功");
+      savedRecord = result?.data;
+      const createdId = String(savedRecord?.id ?? "").trim();
+      recordId = createdId || undefined;
     }
 
+    if (onAfterSubmit) {
+      await onAfterSubmit({
+        mode,
+        recordId,
+        formValues: values,
+        requestPayload,
+        savedRecord,
+      });
+    }
+
+    message.success(mode === "edit" ? "\u66f4\u65b0\u6210\u529f" : "\u521b\u5efa\u6210\u529f");
     closeModal();
     await tableQueryResult?.refetch();
   };
 
   const handleDelete = (record: Record<string, unknown>) => {
     Modal.confirm({
-      title: "确认删除",
-      content: "该操作不可撤销，是否继续？",
+      title: "\u786e\u8ba4\u5220\u9664",
+      content: "\u8be5\u64cd\u4f5c\u4e0d\u53ef\u64a4\u9500\uff0c\u662f\u5426\u7ee7\u7eed\uff1f",
       okButtonProps: { danger: true },
       onOk: async () => {
         await deleteMutate({
@@ -156,7 +238,7 @@ export function CrudResourcePage({
           id: String(record.id),
         });
 
-        message.success("删除成功");
+        message.success("\u5220\u9664\u6210\u529f");
         await tableQueryResult?.refetch();
       },
     });
@@ -173,76 +255,72 @@ export function CrudResourcePage({
       values: { status },
     });
 
-    message.success(status === "PUBLISHED" ? "发布成功" : "已下线");
+    message.success(status === "PUBLISHED" ? "\u53d1\u5e03\u6210\u529f" : "\u5df2\u4e0b\u7ebf");
     await tableQueryResult?.refetch();
   };
 
-  const columns = useMemo<TableColumnsType<Record<string, unknown>>>(() => {
-    const dataColumns: TableColumnsType<Record<string, unknown>> = fields
-      .filter((field) => !field.hideInTable)
-      .map((field) => ({
-        title: field.label,
-        dataIndex: field.key,
-        key: field.key,
-        render: (value: unknown, record: Record<string, unknown>) => {
-          if (field.tableRender) {
-            return field.tableRender(value, record);
-          }
+  const columns: TableColumnsType<Record<string, unknown>> = fields
+    .filter((field) => !field.hideInTable)
+    .map((field) => ({
+      title: field.label,
+      dataIndex: field.key,
+      key: field.key,
+      render: (value: unknown, record: Record<string, unknown>) => {
+        if (field.tableRender) {
+          return field.tableRender(value, record);
+        }
 
-          if (field.key === "status" && typeof value === "string") {
-            const statusColorMap: Record<string, string> = {
-              DRAFT: "orange",
-              REVIEWED: "blue",
-              PUBLISHED: "green",
-              REVOKED: "red",
-              ARCHIVED: "default",
-            };
+        if (field.key === "status" && typeof value === "string") {
+          const statusColorMap: Record<string, string> = {
+            DRAFT: "orange",
+            REVIEWED: "blue",
+            PUBLISHED: "green",
+            REVOKED: "red",
+            ARCHIVED: "default",
+          };
 
-            return <Tag color={statusColorMap[value] ?? "default"}>{value}</Tag>;
-          }
+          return <Tag color={statusColorMap[value] ?? "default"}>{value}</Tag>;
+        }
 
-          if (field.key === "result" && typeof value === "string") {
-            const resultColorMap: Record<string, string> = {
-              PASS: "green",
-              FAIL: "red",
-              PENDING: "orange",
-            };
+        if (field.key === "result" && typeof value === "string") {
+          const resultColorMap: Record<string, string> = {
+            PASS: "green",
+            FAIL: "red",
+            PENDING: "orange",
+          };
 
-            return <Tag color={resultColorMap[value] ?? "default"}>{value}</Tag>;
-          }
+          return <Tag color={resultColorMap[value] ?? "default"}>{value}</Tag>;
+        }
 
-          return renderCellValue(value);
-        },
-      }));
+        return renderCellValue(value);
+      },
+    }));
 
-    dataColumns.push({
-      title: "操作",
-      key: "actions",
-      width: 260,
-      render: (_: unknown, record: Record<string, unknown>) => (
-        <Space wrap>
-          <Button size="small" onClick={() => openEdit(record)}>
-            编辑
-          </Button>
-          {publishResource ? (
-            <>
-              <Button size="small" type="primary" onClick={() => void publish(record, "PUBLISHED")}>
-                发布
-              </Button>
-              <Button size="small" onClick={() => void publish(record, "DRAFT")}>
-                下线
-              </Button>
-            </>
-          ) : null}
-          <Button size="small" danger onClick={() => handleDelete(record)}>
-            删除
-          </Button>
-        </Space>
-      ),
-    });
-
-    return dataColumns;
-  }, [fields, publishResource]);
+  columns.push({
+    title: "\u64cd\u4f5c",
+    key: "actions",
+    width: 260,
+    render: (_: unknown, record: Record<string, unknown>) => (
+      <Space wrap>
+        <Button size="small" onClick={() => void openEdit(record)}>
+          {"\u7f16\u8f91"}
+        </Button>
+        {publishResource ? (
+          <>
+            <Button size="small" type="primary" onClick={() => void publish(record, "PUBLISHED")}>
+              {"\u53d1\u5e03"}
+            </Button>
+            <Button size="small" onClick={() => void publish(record, "DRAFT")}>
+              {"\u4e0b\u7ebf"}
+            </Button>
+          </>
+        ) : null}
+        <Button size="small" danger onClick={() => handleDelete(record)}>
+          {"\u5220\u9664"}
+        </Button>
+      </Space>
+    ),
+  });
 
   const loading =
     tableQueryResult?.isLoading ||
@@ -257,9 +335,9 @@ export function CrudResourcePage({
       <div className="crud-header">
         <h2>{title}</h2>
         <Space>
-          <Button onClick={() => void tableQueryResult?.refetch()}>刷新</Button>
+          <Button onClick={() => void tableQueryResult?.refetch()}>{"\u5237\u65b0"}</Button>
           <Button type="primary" onClick={openCreate}>
-            新增
+            {"\u65b0\u589e"}
           </Button>
         </Space>
       </div>
@@ -274,10 +352,10 @@ export function CrudResourcePage({
 
       <Modal
         open={isModalOpen}
-        title={editingRecord ? `编辑${title}` : `新增${title}`}
+        title={editingRecord ? `\u7f16\u8f91${title}` : `\u65b0\u589e${title}`}
         onCancel={closeModal}
         onOk={() => form.submit()}
-        confirmLoading={Boolean(creating || updating)}
+        confirmLoading={Boolean(creating || updating || loadingFormValues)}
         destroyOnClose
         width={720}
       >
@@ -290,7 +368,11 @@ export function CrudResourcePage({
                 key={field.key}
                 name={field.key}
                 label={field.label}
-                rules={field.required ? [{ required: true, message: `请输入${field.label}` }] : undefined}
+                rules={
+                  field.required
+                    ? [{ required: true, message: `\u8bf7\u8f93\u5165${field.label}` }]
+                    : undefined
+                }
               >
                 {fieldType === "textarea" ? (
                   <Input.TextArea rows={4} />

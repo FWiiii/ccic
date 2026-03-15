@@ -1,4 +1,4 @@
-﻿export type PublishStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+export type PublishStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 export type VerifyStatus = "VALID" | "INVALID" | "EXPIRED" | "REVOKED";
 
 export interface MediaAsset {
@@ -31,6 +31,7 @@ export interface Product {
   name: string;
   brand?: string;
   model?: string;
+  material?: string;
   summary?: string;
   productInfoHtml?: string;
   companyId: string;

@@ -2,7 +2,6 @@ import {
   ApartmentOutlined,
   FileSearchOutlined,
   PictureOutlined,
-  ProfileOutlined,
   ShopOutlined,
 } from "@ant-design/icons";
 import { Refine } from "@refinedev/core";
@@ -12,10 +11,9 @@ import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 import { LoginPage } from "./components/LoginPage";
 import {
   CompaniesPage,
-  InspectionEventsPage,
-  InspectionImagesPage,
   InspectionsPage,
   MediaPage,
+  ProductImagesPage,
   ProductsPage,
 } from "./resources/pages";
 import { authProvider } from "./providers/auth-provider";
@@ -57,39 +55,31 @@ export default function App() {
           name: "inspections",
           list: "/inspections",
           meta: {
-            label: "鉴定单",
+            label: "\u9274\u5b9a\u5355",
             icon: <FileSearchOutlined />,
-          },
-        },
-        {
-          name: "inspection-images",
-          list: "/inspection-images",
-          meta: {
-            label: "检测图片",
-            icon: <PictureOutlined />,
-          },
-        },
-        {
-          name: "inspection-events",
-          list: "/inspection-events",
-          meta: {
-            label: "检测轨迹",
-            icon: <ProfileOutlined />,
           },
         },
         {
           name: "products",
           list: "/products",
           meta: {
-            label: "商品",
+            label: "\u5546\u54c1",
             icon: <ShopOutlined />,
+          },
+        },
+        {
+          name: "product-images",
+          list: "/product-images",
+          meta: {
+            label: "\u5546\u54c1\u56fe\u7247",
+            icon: <PictureOutlined />,
           },
         },
         {
           name: "companies",
           list: "/companies",
           meta: {
-            label: "送检公司",
+            label: "\u9001\u68c0\u516c\u53f8",
             icon: <ApartmentOutlined />,
           },
         },
@@ -97,7 +87,7 @@ export default function App() {
           name: "media",
           list: "/media",
           meta: {
-            label: "素材",
+            label: "\u7d20\u6750\u5e93",
             icon: <PictureOutlined />,
           },
         },
@@ -111,9 +101,8 @@ export default function App() {
         <Route element={<RequireAuthLayout />}>
           <Route index element={<Navigate to="/inspections" replace />} />
           <Route path="/inspections" element={<InspectionsPage />} />
-          <Route path="/inspection-images" element={<InspectionImagesPage />} />
-          <Route path="/inspection-events" element={<InspectionEventsPage />} />
           <Route path="/products" element={<ProductsPage />} />
+          <Route path="/product-images" element={<ProductImagesPage />} />
           <Route path="/companies" element={<CompaniesPage />} />
           <Route path="/media" element={<MediaPage />} />
         </Route>
