@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { fetchInspectionBySn, PublicInspectionRequestError, type PublicInspectionData } from "./api/publicInspection";
+import { useState } from "react";
 import { HeroImage } from "./components/HeroImage";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { PageFooter } from "./components/PageFooter";
@@ -8,196 +7,42 @@ import { ProductSummary } from "./components/ProductSummary";
 import { TopTabs, type TabKey } from "./components/TopTabs";
 import { CompanyInfoTab } from "./components/tabs/CompanyInfoTab";
 import { ProductInfoTab } from "./components/tabs/ProductInfoTab";
-import { TraceInfoTab, type TraceStatus } from "./components/tabs/TraceInfoTab";
-import { SearchPage } from "./pages/SearchPage";
+import { TraceInfoTab } from "./components/tabs/TraceInfoTab";
+import { useInspectionDisplayModel } from "./hooks/useInspectionDisplayModel";
+import { useInspectionQuery } from "./hooks/useInspectionQuery";
+import { useRouteType } from "./hooks/useRouteType";
 import { FeedbackPage } from "./pages/FeedbackPage";
+import { SearchPage } from "./pages/SearchPage";
 import { TraceNotFoundPage } from "./pages/TraceNotFoundPage";
 
 const INSPECTION_AGENCY_FALLBACK =
-  "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
-
-const readSnFromUrl = () => {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("sn")?.trim() ?? "";
-};
-
-const readPathnameFromUrl = () => window.location.pathname;
-
-const isSearchPath = (pathname: string) => pathname === "/search" || pathname.startsWith("/search/");
-
-const isFeedbackPath = (pathname: string) => pathname === "/feedback" || pathname.startsWith("/feedback/");
-
-const isTraceStatus = (value: unknown): value is TraceStatus =>
-  value === "SUBMITTED" || value === "INSPECTING" || value === "COMPLETED";
-
-const normalizeDateString = (value: string) => {
-  const text = String(value ?? "").trim();
-  if (!text) {
-    return "";
-  }
-
-  const matched = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-  if (matched) {
-    return `${matched[1]}-${matched[2].padStart(2, "0")}-${matched[3].padStart(2, "0")}`;
-  }
-
-  const parsed = new Date(text);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10);
-  }
-
-  return text;
-};
-
-const inferTraceStatusFromInspection = (inspectionStatus: string): TraceStatus => {
-  if (inspectionStatus === "PUBLISHED" || inspectionStatus === "REVOKED") {
-    return "COMPLETED";
-  }
-
-  if (inspectionStatus === "REVIEWED") {
-    return "INSPECTING";
-  }
-
-  return "SUBMITTED";
-};
+  "中国检验认证集团奢侈品鉴定中心";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("taba");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [querySn, setQuerySn] = useState(() => readSnFromUrl());
-  const [pathname, setPathname] = useState(() => readPathnameFromUrl());
-  const [inspectionData, setInspectionData] = useState<PublicInspectionData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [showTraceNotFoundPage, setShowTraceNotFoundPage] = useState(false);
 
-  const isSearchPage = isSearchPath(pathname);
-  const isFeedbackPage = isFeedbackPath(pathname);
+  const { querySn, isSearchPage, isFeedbackPage } = useRouteType();
 
-  useEffect(() => {
-    const onPopState = () => {
-      setQuerySn(readSnFromUrl());
-      setPathname(readPathnameFromUrl());
-    };
+  const { inspectionData, isLoading, errorMessage, showTraceNotFoundPage } = useInspectionQuery({
+    querySn,
+    isSearchPage,
+    isFeedbackPage,
+  });
 
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
-
-  useEffect(() => {
-    if (isSearchPage || isFeedbackPage) {
-      setIsLoading(false);
-      setErrorMessage("");
-      setShowTraceNotFoundPage(false);
-      return;
-    }
-
-    const sn = querySn.trim();
-
-    if (!sn) {
-      setInspectionData(null);
-      setShowTraceNotFoundPage(false);
-      setErrorMessage("\u94fe\u63a5\u7f3a\u5c11 sn \u53c2\u6570\uff0c\u8bf7\u68c0\u67e5\u4e8c\u7ef4\u7801\u5730\u5740\u3002");
-      setIsLoading(false);
-      return;
-    }
-
-    const abortController = new AbortController();
-
-    setIsLoading(true);
-    setErrorMessage("");
-    setShowTraceNotFoundPage(false);
-
-    fetchInspectionBySn(sn, abortController.signal)
-      .then((data) => {
-        setInspectionData(data);
-        setShowTraceNotFoundPage(false);
-        setErrorMessage("");
-      })
-      .catch((error) => {
-        if (abortController.signal.aborted) {
-          return;
-        }
-
-        setInspectionData(null);
-
-        const isInspectionNotFound =
-          (error instanceof PublicInspectionRequestError && error.status === 404) ||
-          (error instanceof Error && /inspection not found/i.test(error.message));
-
-        if (isInspectionNotFound) {
-          setShowTraceNotFoundPage(true);
-          setErrorMessage("");
-          return;
-        }
-
-        const message =
-          error instanceof Error && error.message
-            ? error.message
-            : "\u67e5\u8be2\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
-        setShowTraceNotFoundPage(false);
-        setErrorMessage(message);
-      })
-      .finally(() => {
-        if (!abortController.signal.aborted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => abortController.abort();
-  }, [querySn, isSearchPage, isFeedbackPage]);
-
-  const bannerImages = useMemo(() => {
-    const displayImages = (inspectionData?.display?.indexBannerImages ?? [])
-      .map((item) => String(item?.url ?? "").trim())
-      .filter(Boolean);
-    const fallbackImages = (inspectionData?.images ?? [])
-      .map((item) => String(item?.url ?? "").trim())
-      .filter(Boolean);
-
-    const merged = displayImages.length > 0 ? displayImages : fallbackImages;
-    return Array.from(new Set(merged));
-  }, [inspectionData]);
-
-  const traceSampleImages = useMemo(() => {
-    const inspectionImages = (inspectionData?.images ?? [])
-      .map((item) => String(item?.url ?? "").trim())
-      .filter(Boolean);
-
-    if (inspectionImages.length > 0) {
-      return Array.from(new Set(inspectionImages));
-    }
-
-    const displayImages = (inspectionData?.display?.indexBannerImages ?? [])
-      .map((item) => String(item?.url ?? "").trim())
-      .filter(Boolean);
-
-    return Array.from(new Set(displayImages));
-  }, [inspectionData]);
-
-  const productName =
-    inspectionData?.display?.productName?.trim() || inspectionData?.product?.name?.trim() || "-";
-
-  const inspectionAgencyName = inspectionData?.inspectionAgencyName?.trim() || INSPECTION_AGENCY_FALLBACK;
-
-  const consignorName =
-    inspectionData?.display?.consignorName?.trim() || inspectionData?.company?.name?.trim() || "-";
-
-  const verificationDate =
-    inspectionData?.display?.verificationDate?.trim() ||
-    normalizeDateString(inspectionData?.inspection?.inspectionTime ?? "") ||
-    "-";
-
-  const conclusion = inspectionData?.inspection?.conclusion?.trim() || undefined;
-
-  const currentTraceStatus = useMemo<TraceStatus>(() => {
-    const statusFromApi = inspectionData?.display?.traceInfo?.currentStatus;
-    if (isTraceStatus(statusFromApi)) {
-      return statusFromApi;
-    }
-
-    return inferTraceStatusFromInspection(String(inspectionData?.inspection?.status ?? ""));
-  }, [inspectionData]);
+  const {
+    bannerImages,
+    traceSampleImages,
+    productName,
+    inspectionAgencyName,
+    consignorName,
+    verificationDate,
+    conclusion,
+    currentTraceStatus,
+  } = useInspectionDisplayModel({
+    inspectionData,
+    inspectionAgencyFallback: INSPECTION_AGENCY_FALLBACK,
+  });
 
   if (isSearchPage) {
     return <SearchPage />;
@@ -219,7 +64,7 @@ export default function App() {
 
         {isLoading ? (
           <div className="app-query-status">
-            {"\u6b63\u5728\u6839\u636e SN \u67e5\u8be2\u9274\u5b9a\u7ed3\u679c..."}
+            {"正在根据 SN 查询鉴定结果..."}
           </div>
         ) : null}
 
@@ -270,7 +115,7 @@ export default function App() {
             <div className="unsetshowthreediv">
               <span>
                 {errorMessage ||
-                  "\u6b64\u8ffd\u6eaf\u7801\u65e0\u6548\u3002\u53ef\u8054\u7cfb\u4e2d\u68c0\u6eaf\u6e90\u670d\u52a1\u70ed\u7ebf0512-67998071\u54a8\u8be2\u3002"}
+                  "此追溯码无效。可联系中检溯源服务热线0512-67998071咨询。"}
               </span>
             </div>
             <div className="ht50">
@@ -285,11 +130,11 @@ export default function App() {
           <div className="unsetshowdoublediv">
             <div className="unsetshowthreediv">
               <span>
-                {"\u4e0b\u8f7d\u8be5\u6587\u4ef6\u5c06\u4ea7\u751f"}
+                {"下载该文件将产生"}
                 <i className="c-font-normal" id="file-size"></i>
-                {"\u7684\u6d41\u91cf"}
+                {"的流量"}
               </span>
-              <span className="c-pt-0">{"\u662f\u5426\u786e\u8ba4\u4e0b\u8f7d?"}</span>
+              <span className="c-pt-0">{"是否确认下载?"}</span>
             </div>
             <div className="ht50">
               <a
@@ -298,10 +143,10 @@ export default function App() {
                 href="#"
                 onClick={(e) => e.preventDefault()}
               >
-                <span>{"\u786e\u8ba4"}</span>
+                <span>{"确认"}</span>
               </a>
               <div id="file-cancal-btn" className="download-btn-frame">
-                <span>{"\u53d6\u6d88"}</span>
+                <span>{"取消"}</span>
               </div>
             </div>
           </div>
