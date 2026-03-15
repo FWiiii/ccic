@@ -714,10 +714,6 @@ export class AdminController {
         return { error: "COMPANY_NOT_FOUND" as const };
       }
 
-      const productNameSnapshotRaw =
-        body?.productNameSnapshot === undefined ? "" : String(body.productNameSnapshot ?? "").trim();
-      const companyNameSnapshotRaw =
-        body?.companyNameSnapshot === undefined ? "" : String(body.companyNameSnapshot ?? "").trim();
       const conclusionRaw = body?.conclusion === undefined ? "" : String(body.conclusion ?? "");
 
       const item: Inspection = {
@@ -729,8 +725,6 @@ export class AdminController {
         result: isInspectionResult(resultValue) ? resultValue : "PENDING",
         status: isInspectionStatus(statusValue) ? statusValue : "DRAFT",
         conclusion: conclusionRaw.trim() ? conclusionRaw : undefined,
-        productNameSnapshot: productNameSnapshotRaw || product.name,
-        companyNameSnapshot: companyNameSnapshotRaw || company.name,
         createdAt: now,
         updatedAt: now,
       };
@@ -788,9 +782,6 @@ export class AdminController {
         }
 
         item.productId = productId;
-        if (body?.productNameSnapshot === undefined) {
-          item.productNameSnapshot = product.name;
-        }
       }
 
       if (body?.companyId !== undefined) {
@@ -805,9 +796,6 @@ export class AdminController {
         }
 
         item.companyId = companyId;
-        if (body?.companyNameSnapshot === undefined) {
-          item.companyNameSnapshot = company.name;
-        }
       }
 
       if (body?.inspectionTime !== undefined) {
@@ -842,15 +830,6 @@ export class AdminController {
         item.conclusion = conclusion.trim() ? conclusion : undefined;
       }
 
-      if (body?.productNameSnapshot !== undefined) {
-        const productNameSnapshot = String(body.productNameSnapshot ?? "").trim();
-        item.productNameSnapshot = productNameSnapshot || undefined;
-      }
-
-      if (body?.companyNameSnapshot !== undefined) {
-        const companyNameSnapshot = String(body.companyNameSnapshot ?? "").trim();
-        item.companyNameSnapshot = companyNameSnapshot || undefined;
-      }
 
       item.updatedAt = this.databaseService.nowIso();
       return { data: item };
@@ -1757,4 +1736,6 @@ export class AdminController {
     }
   }
 }
+
+
 

@@ -3,6 +3,7 @@ import type {
   MediaAsset,
   ProductImage,
   PublicInspectionAggregate,
+  PublicInspectionTraceStatus,
   TracePageAggregate,
 } from "../database/database.types";
 import { DatabaseService } from "../database/database.service";
@@ -13,7 +14,73 @@ const parseAssetIdsCsv = (value: unknown) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
-const INSPECTION_AGENCY_NAME = "中国检验认证集团奢侈品鉴定中心";
+const INSPECTION_AGENCY_NAME = "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
+
+const TRACE_STEPS: PublicInspectionAggregate["display"]["traceInfo"]["steps"] = [
+  { status: "SUBMITTED", label: "\u5df2\u9001\u68c0", reached: false },
+  { status: "INSPECTING", label: "\u68c0\u6d4b\u4e2d", reached: false },
+  { status: "COMPLETED", label: "\u5df2\u68c0\u6d4b", reached: false },
+];
+
+const TRACE_STATUS_RANK: Record<PublicInspectionTraceStatus, number> = {
+  SUBMITTED: 1,
+  INSPECTING: 2,
+  COMPLETED: 3,
+};
+
+const formatVerificationDate = (value: string) => {
+  const text = String(value ?? "").trim();
+
+  if (!text) {
+    return "";
+  }
+
+  const matched = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (matched) {
+    return `${matched[1]}-${matched[2].padStart(2, "0")}-${matched[3].padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(text);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return text;
+};
+
+const resolveTraceStatus = (
+  inspectionStatus: PublicInspectionAggregate["inspection"]["status"],
+  events: PublicInspectionAggregate["events"]
+): PublicInspectionTraceStatus => {
+  if (events.some((item) => item.eventType === "CERTIFIED" || item.eventType === "PUBLISHED")) {
+    return "COMPLETED";
+  }
+
+  if (events.some((item) => item.eventType === "INSPECTION" || item.eventType === "SAMPLE_RECEIVED")) {
+    return "INSPECTING";
+  }
+
+  if (inspectionStatus === "PUBLISHED" || inspectionStatus === "REVOKED") {
+    return "COMPLETED";
+  }
+
+  if (inspectionStatus === "REVIEWED") {
+    return "INSPECTING";
+  }
+
+  return "SUBMITTED";
+};
+
+const buildTraceSteps = (
+  currentStatus: PublicInspectionTraceStatus
+): PublicInspectionAggregate["display"]["traceInfo"]["steps"] => {
+  const currentRank = TRACE_STATUS_RANK[currentStatus];
+
+  return TRACE_STEPS.map((item) => ({
+    ...item,
+    reached: TRACE_STATUS_RANK[item.status] <= currentRank,
+  }));
+};
 
 @Controller(["api/public", "api/v1/public"])
 export class PublicController {
@@ -66,19 +133,39 @@ export class PublicController {
         a.eventTime === b.eventTime ? a.sortOrder - b.sortOrder : a.eventTime > b.eventTime ? -1 : 1
       );
 
+    const fallbackIndexBannerImages = db.productImages
+      .filter((item) => item.productId === product.id)
+      .filter((item) => ["HERO", "CAROUSEL", "DETAIL"].includes(item.scene))
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((item) => assetById.get(item.assetId))
+      .filter((item): item is MediaAsset => Boolean(item));
+
+    const currentStatus = resolveTraceStatus(inspection.status, events);
+    const indexBannerImages = images.length > 0 ? images : fallbackIndexBannerImages;
+
     const data: PublicInspectionAggregate = {
       inspectionAgencyName: INSPECTION_AGENCY_NAME,
       inspection,
       product: {
         ...product,
-        name: inspection.productNameSnapshot?.trim() || product.name,
+        name: product.name,
       },
       company: {
         ...company,
-        name: inspection.companyNameSnapshot?.trim() || company.name,
+        name: company.name,
       },
       images,
       events,
+      display: {
+        indexBannerImages,
+        productName: product.name,
+        consignorName: company.name,
+        verificationDate: formatVerificationDate(inspection.inspectionTime),
+        traceInfo: {
+          currentStatus,
+          steps: buildTraceSteps(currentStatus),
+        },
+      },
     };
 
     return { data };
@@ -200,3 +287,4 @@ export class PublicController {
     };
   }
 }
+

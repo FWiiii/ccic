@@ -13,7 +13,6 @@ import {
   CompaniesPage,
   InspectionsPage,
   MediaPage,
-  ProductImagesPage,
   ProductsPage,
 } from "./resources/pages";
 import { authProvider } from "./providers/auth-provider";
@@ -68,14 +67,6 @@ export default function App() {
           },
         },
         {
-          name: "product-images",
-          list: "/product-images",
-          meta: {
-            label: "\u5546\u54c1\u56fe\u7247",
-            icon: <PictureOutlined />,
-          },
-        },
-        {
           name: "companies",
           list: "/companies",
           meta: {
@@ -102,7 +93,6 @@ export default function App() {
           <Route index element={<Navigate to="/inspections" replace />} />
           <Route path="/inspections" element={<InspectionsPage />} />
           <Route path="/products" element={<ProductsPage />} />
-          <Route path="/product-images" element={<ProductImagesPage />} />
           <Route path="/companies" element={<CompaniesPage />} />
           <Route path="/media" element={<MediaPage />} />
         </Route>

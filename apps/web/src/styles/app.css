@@ -53,6 +53,7 @@ body,
   margin: 0 3px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
 }
 
 .swiper-pagination-bullet-active {
@@ -90,4 +91,11 @@ body,
   max-width: 96%;
   max-height: 96%;
   object-fit: contain;
+}
+
+.app-query-status {
+  padding: 6px 12px;
+  color: #005bac;
+  font-size: 12px;
+  text-align: center;
 }

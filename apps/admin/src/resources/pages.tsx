@@ -18,16 +18,16 @@ const PROGRESS_STAGE_OPTIONS: FieldOption[] = [
   { label: "\u5df2\u68c0\u6d4b", value: "COMPLETED" },
 ];
 
-const IMAGE_SLOT_CONFIG = [
-  { key: "imageAssetId1", label: "\u9274\u5b9a\u56fe\u72471", scene: "HERO", sortOrder: 0 },
-  { key: "imageAssetId2", label: "\u9274\u5b9a\u56fe\u72472", scene: "DETAIL", sortOrder: 1 },
-  { key: "imageAssetId3", label: "\u9274\u5b9a\u56fe\u72473", scene: "CERT", sortOrder: 2 },
-] as const;
-
 const TRACK_EVENT_CONFIG = [
   { title: "\u5df2\u9001\u68c0", eventType: "SUBMIT" },
   { title: "\u68c0\u6d4b\u4e2d", eventType: "INSPECTION" },
   { title: "\u5df2\u68c0\u6d4b", eventType: "CERTIFIED" },
+] as const;
+
+const PRODUCT_IMAGE_SLOT_CONFIG = [
+  { key: "productImageAssetId1", scene: "HERO", sortOrder: 0 },
+  { key: "productImageAssetId2", scene: "CAROUSEL", sortOrder: 1 },
+  { key: "productImageAssetId3", scene: "DETAIL", sortOrder: 2 },
 ] as const;
 
 function safeParseJson<T>(text: string): T | null {
@@ -122,15 +122,15 @@ function buildEventTimes(inspectionTime: unknown) {
   );
 }
 
-async function listInspectionImages(inspectionId: string) {
-  return asArray(
-    await adminRequest<unknown>(`/api/admin/inspection-images?inspectionId=${encodeURIComponent(inspectionId)}`)
-  );
-}
-
 async function listInspectionEvents(inspectionId: string) {
   return asArray(
     await adminRequest<unknown>(`/api/admin/inspection-events?inspectionId=${encodeURIComponent(inspectionId)}`)
+  );
+}
+
+async function listProductImages(productId: string) {
+  return asArray(
+    await adminRequest<unknown>(`/api/admin/product-images?productId=${encodeURIComponent(productId)}`)
   );
 }
 
@@ -140,9 +140,12 @@ async function resolveInspectionId(context: CrudSubmitContext) {
     return fromContext;
   }
 
-  const sn = String(
-    context.savedRecord?.sn ?? context.requestPayload.sn ?? context.formValues.sn ?? ""
-  ).trim();
+  const fromSaved = String(context.savedRecord?.id ?? "").trim();
+  if (fromSaved) {
+    return fromSaved;
+  }
+
+  const sn = String(context.savedRecord?.sn ?? context.requestPayload.sn ?? context.formValues.sn ?? "").trim();
 
   if (!sn) {
     return "";
@@ -152,39 +155,13 @@ async function resolveInspectionId(context: CrudSubmitContext) {
   return String(rows[0]?.id ?? "").trim();
 }
 
-async function syncInspectionImages(inspectionId: string, formValues: Record<string, unknown>) {
-  const existing = await listInspectionImages(inspectionId);
-
-  await Promise.all(
-    existing.map(async (item) => {
-      const id = String(item.id ?? "").trim();
-      if (!id) {
-        return;
-      }
-
-      await adminRequest(`/api/admin/inspection-images/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-    })
-  );
-
-  for (const slot of IMAGE_SLOT_CONFIG) {
-    const assetId = toOptionalString(formValues[slot.key]);
-
-    if (!assetId) {
-      continue;
-    }
-
-    await adminRequest("/api/admin/inspection-images", {
-      method: "POST",
-      body: JSON.stringify({
-        inspectionId,
-        assetId,
-        scene: slot.scene,
-        sortOrder: slot.sortOrder,
-      }),
-    });
+async function resolveProductId(context: CrudSubmitContext) {
+  const fromContext = String(context.recordId ?? "").trim();
+  if (fromContext) {
+    return fromContext;
   }
+
+  return String(context.savedRecord?.id ?? "").trim();
 }
 
 async function syncInspectionTrack(
@@ -226,6 +203,41 @@ async function syncInspectionTrack(
   }
 }
 
+async function syncProductImages(productId: string, formValues: Record<string, unknown>) {
+  const existingBindings = await listProductImages(productId);
+
+  await Promise.all(
+    existingBindings.map(async (item) => {
+      const id = String(item.id ?? "").trim();
+      if (!id) {
+        return;
+      }
+
+      await adminRequest(`/api/admin/product-images/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    })
+  );
+
+  for (const slot of PRODUCT_IMAGE_SLOT_CONFIG) {
+    const assetId = toOptionalString(formValues[slot.key]);
+
+    if (!assetId) {
+      continue;
+    }
+
+    await adminRequest("/api/admin/product-images", {
+      method: "POST",
+      body: JSON.stringify({
+        productId,
+        assetId,
+        scene: slot.scene,
+        sortOrder: slot.sortOrder,
+      }),
+    });
+  }
+}
+
 function useSelectOptions(resource: string, labelField = "name") {
   const { data } = useList<Record<string, unknown>>({
     resource,
@@ -253,7 +265,6 @@ function useSelectOptions(resource: string, labelField = "name") {
 export function InspectionsPage() {
   const productOptions = useSelectOptions("products");
   const companyOptions = useSelectOptions("companies");
-  const mediaOptions = useSelectOptions("media");
 
   const productMap = useMemo(
     () => new Map(productOptions.map((item) => [item.value, item.label])),
@@ -275,36 +286,9 @@ export function InspectionsPage() {
           return { progressStage: "SUBMITTED" as ProgressStage };
         }
 
-        const [images, events] = await Promise.all([
-          listInspectionImages(inspectionId),
-          listInspectionEvents(inspectionId),
-        ]);
-
-        const assetByScene = new Map<string, string>();
-        const assetBySort = new Map<number, string>();
-
-        for (const image of images) {
-          const assetId = toOptionalString(image.assetId);
-          if (!assetId) {
-            continue;
-          }
-
-          const scene = String(image.scene ?? "").toUpperCase();
-          const sortOrder = Number(image.sortOrder ?? 0);
-
-          if (scene) {
-            assetByScene.set(scene, assetId);
-          }
-
-          if (Number.isFinite(sortOrder)) {
-            assetBySort.set(sortOrder, assetId);
-          }
-        }
+        const events = await listInspectionEvents(inspectionId);
 
         return {
-          imageAssetId1: assetByScene.get("HERO") ?? assetBySort.get(0),
-          imageAssetId2: assetByScene.get("DETAIL") ?? assetBySort.get(1),
-          imageAssetId3: assetByScene.get("CERT") ?? assetBySort.get(2),
           progressStage: inferProgressStage(events),
         };
       }}
@@ -318,7 +302,6 @@ export function InspectionsPage() {
         const stage: ProgressStage =
           stageRaw === "INSPECTING" || stageRaw === "COMPLETED" ? (stageRaw as ProgressStage) : "SUBMITTED";
 
-        await syncInspectionImages(inspectionId, context.formValues);
         await syncInspectionTrack(
           inspectionId,
           stage,
@@ -378,29 +361,6 @@ export function InspectionsPage() {
           hideInTable: true,
           options: PROGRESS_STAGE_OPTIONS,
         },
-        {
-          key: "imageAssetId1",
-          label: "\u9274\u5b9a\u56fe\u72471",
-          type: "select",
-          hideInTable: true,
-          options: mediaOptions,
-        },
-        {
-          key: "imageAssetId2",
-          label: "\u9274\u5b9a\u56fe\u72472",
-          type: "select",
-          hideInTable: true,
-          options: mediaOptions,
-        },
-        {
-          key: "imageAssetId3",
-          label: "\u9274\u5b9a\u56fe\u72473",
-          type: "select",
-          hideInTable: true,
-          options: mediaOptions,
-        },
-        { key: "productNameSnapshot", label: "\u5546\u54c1\u540d\u79f0\u5feb\u7167", hideInTable: true },
-        { key: "companyNameSnapshot", label: "\u9001\u68c0\u516c\u53f8\u5feb\u7167", hideInTable: true },
         { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
       ]}
     />
@@ -409,6 +369,8 @@ export function InspectionsPage() {
 
 export function ProductsPage() {
   const companyOptions = useSelectOptions("companies");
+  const mediaOptions = useSelectOptions("media");
+
   const companyMap = useMemo(
     () => new Map(companyOptions.map((item) => [item.value, item.label])),
     [companyOptions]
@@ -419,6 +381,49 @@ export function ProductsPage() {
       title={"\u5546\u54c1\u7ba1\u7406"}
       resource="products"
       publishResource="products"
+      loadEditFormValues={async (record) => {
+        const productId = String(record.id ?? "").trim();
+        if (!productId) {
+          return {};
+        }
+
+        const bindings = await listProductImages(productId);
+
+        const byScene = new Map<string, string>();
+        const bySort = new Map<number, string>();
+
+        for (const binding of bindings) {
+          const assetId = String(binding.assetId ?? "").trim();
+          const scene = String(binding.scene ?? "").toUpperCase();
+          const sortOrder = Number(binding.sortOrder ?? 0);
+
+          if (!assetId) {
+            continue;
+          }
+
+          if (scene) {
+            byScene.set(scene, assetId);
+          }
+
+          if (Number.isFinite(sortOrder)) {
+            bySort.set(sortOrder, assetId);
+          }
+        }
+
+        return {
+          productImageAssetId1: byScene.get("HERO") ?? bySort.get(0),
+          productImageAssetId2: byScene.get("CAROUSEL") ?? bySort.get(1),
+          productImageAssetId3: byScene.get("DETAIL") ?? bySort.get(2),
+        };
+      }}
+      onAfterSubmit={async (context) => {
+        const productId = await resolveProductId(context);
+        if (!productId) {
+          throw new Error("\u4fdd\u5b58\u5546\u54c1\u540e\u672a\u83b7\u53d6\u5230ID");
+        }
+
+        await syncProductImages(productId, context.formValues);
+      }}
       fields={[
         { key: "name", label: "\u5546\u54c1\u540d\u79f0", required: true },
         {
@@ -433,6 +438,27 @@ export function ProductsPage() {
         { key: "brand", label: "\u54c1\u724c" },
         { key: "model", label: "\u578b\u53f7" },
         { key: "material", label: "\u6750\u8d28" },
+        {
+          key: "productImageAssetId1",
+          label: "\u5546\u54c1\u56fe\u72471",
+          type: "select",
+          hideInTable: true,
+          options: mediaOptions,
+        },
+        {
+          key: "productImageAssetId2",
+          label: "\u5546\u54c1\u56fe\u72472",
+          type: "select",
+          hideInTable: true,
+          options: mediaOptions,
+        },
+        {
+          key: "productImageAssetId3",
+          label: "\u5546\u54c1\u56fe\u72473",
+          type: "select",
+          hideInTable: true,
+          options: mediaOptions,
+        },
         { key: "summary", label: "\u6458\u8981", type: "textarea", hideInTable: true },
         { key: "productInfoHtml", label: "\u5546\u54c1\u8be6\u60c5HTML", type: "textarea", hideInTable: true },
         {
@@ -446,59 +472,6 @@ export function ProductsPage() {
           ],
         },
         { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
-      ]}
-    />
-  );
-}
-
-export function ProductImagesPage() {
-  const productOptions = useSelectOptions("products");
-  const mediaOptions = useSelectOptions("media");
-
-  const productMap = useMemo(
-    () => new Map(productOptions.map((item) => [item.value, item.label])),
-    [productOptions]
-  );
-  const mediaMap = useMemo(
-    () => new Map(mediaOptions.map((item) => [item.value, item.label])),
-    [mediaOptions]
-  );
-
-  return (
-    <CrudResourcePage
-      title={"\u5546\u54c1\u56fe\u7247\u7ba1\u7406\uff08\u5148\u5728\u7d20\u6750\u5e93\u4e0a\u4f20\u56fe\u7247\uff0c\u518d\u5728\u6b64\u7ed1\u5b9a\u5230\u5546\u54c1\uff09"}
-      resource="product-images"
-      fields={[
-        {
-          key: "productId",
-          label: "\u5546\u54c1",
-          type: "select",
-          required: true,
-          options: productOptions,
-          tableRender: (value) => productMap.get(String(value ?? "")) ?? String(value ?? "-"),
-        },
-        {
-          key: "assetId",
-          label: "\u7d20\u6750",
-          type: "select",
-          required: true,
-          options: mediaOptions,
-          tableRender: (value) => mediaMap.get(String(value ?? "")) ?? String(value ?? "-"),
-        },
-        {
-          key: "scene",
-          label: "\u5546\u54c1\u56fe\u573a\u666f",
-          type: "select",
-          required: true,
-          options: [
-            { label: "HERO", value: "HERO" },
-            { label: "CAROUSEL", value: "CAROUSEL" },
-            { label: "COMPANY_DETAIL", value: "COMPANY_DETAIL" },
-            { label: "DETAIL", value: "DETAIL" },
-          ],
-        },
-        { key: "sortOrder", label: "\u6392\u5e8f", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "createdAt", label: "\u521b\u5efa\u65f6\u95f4", hideInForm: true },
       ]}
     />
   );

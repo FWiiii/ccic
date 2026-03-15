@@ -4,7 +4,7 @@
       "id": "user-admin-1",
       "username": "admin",
       "password": "admin123",
-      "displayName": "系统管理员",
+      "displayName": "admin",
       "role": "SUPER_ADMIN",
       "status": "ACTIVE",
       "createdAt": "2026-03-13T00:00:00.000Z",
@@ -15,7 +15,7 @@
     {
       "id": "media-hero-1",
       "url": "http://localhost:4000/static/hero.svg",
-      "name": "商品主图",
+      "name": "鉴定主图",
       "mimeType": "image/svg+xml",
       "sizeBytes": 1200,
       "width": 1200,
@@ -25,7 +25,7 @@
     {
       "id": "media-carousel-1",
       "url": "http://localhost:4000/static/product.svg",
-      "name": "轮播图",
+      "name": "商品细节图",
       "mimeType": "image/svg+xml",
       "sizeBytes": 980,
       "width": 960,
@@ -35,7 +35,7 @@
     {
       "id": "media-company-1",
       "url": "http://localhost:4000/static/company.svg",
-      "name": "企业图",
+      "name": "送检公司图",
       "mimeType": "image/svg+xml",
       "sizeBytes": 980,
       "width": 960,
@@ -46,18 +46,21 @@
   "companies": [
     {
       "id": "afe808d7-03c6-41b6-8dd5-1405ddca4ac2",
-      "name": "向妮体育",
+      "name": "省向体育用品有限公司（样例二）",
       "status": "PUBLISHED",
       "createdAt": "2026-03-14T03:45:47.307Z",
-      "updatedAt": "2026-03-14T03:45:51.171Z"
+      "updatedAt": "2026-03-14T03:45:51.171Z",
+      "shortName": "省向体育二部",
+      "address": "北京市朝阳区示例路88号",
+      "descriptionHtml": "<p>示例送检公司（二）。</p>"
     },
     {
       "id": "company-1",
-      "name": "省向体育",
+      "name": "省向体育用品有限公司",
       "shortName": "省向体育",
       "phone": "010-58619556",
-      "address": " ",
-      "descriptionHtml": "<p>这是企业介绍示例文本，可在后台修改并发布。</p>",
+      "address": "北京市朝阳区示例路100号",
+      "descriptionHtml": "<p>示例送检公司。</p>",
       "logoAssetId": "media-company-1",
       "status": "PUBLISHED",
       "createdAt": "2026-03-13T00:00:00.000Z",
@@ -68,16 +71,17 @@
     {
       "id": "product-1",
       "sku": "SKU-DEMO-001",
-      "name": "LOUIS VUITTON/路易威登",
+      "name": "LOUIS VUITTON/LV翻盖包",
       "brand": "LOUIS VUITTON",
       "model": "DEMO-2026",
-      "summary": "演示商品，用于联调前后台和公开查询接口。",
-      "productInfoHtml": "<p>这是一条示例产品说明，后续可由后台维护。</p>",
+      "summary": "LV翻盖包，Monogram材质。",
+      "productInfoHtml": "<p>LV翻盖包，材质Monogram涂层帆布配牛皮。</p>",
       "companyId": "company-1",
       "status": "PUBLISHED",
       "publishedAt": "2026-03-13T00:00:00.000Z",
       "createdAt": "2026-03-13T00:00:00.000Z",
-      "updatedAt": "2026-03-13T00:00:00.000Z"
+      "updatedAt": "2026-03-15T04:47:15.459Z",
+      "material": "Monogram 涂层帆布配牛皮"
     }
   ],
   "productImages": [
@@ -90,52 +94,71 @@
       "createdAt": "2026-03-13T00:00:00.000Z"
     },
     {
-      "id": "binding-carousel-1",
+      "id": "af29d326-4997-47c1-b336-10fd9c661768",
+      "productId": "product-1",
+      "assetId": "media-hero-1",
+      "scene": "HERO",
+      "sortOrder": 0,
+      "createdAt": "2026-03-15T04:47:15.577Z"
+    },
+    {
+      "id": "e333dd95-3290-4798-8584-78771bae1e26",
       "productId": "product-1",
       "assetId": "media-carousel-1",
       "scene": "CAROUSEL",
-      "sortOrder": 0,
-      "createdAt": "2026-03-13T00:00:00.000Z"
+      "sortOrder": 1,
+      "createdAt": "2026-03-15T04:47:15.591Z"
     },
     {
-      "id": "binding-company-detail-1",
+      "id": "a6502ac7-9836-4073-9fbc-0db408052277",
       "productId": "product-1",
       "assetId": "media-company-1",
-      "scene": "COMPANY_DETAIL",
-      "sortOrder": 0,
-      "createdAt": "2026-03-13T00:00:00.000Z"
+      "scene": "DETAIL",
+      "sortOrder": 2,
+      "createdAt": "2026-03-15T04:47:15.603Z"
     }
   ],
   "inspectionReports": [
     {
       "id": "report-1",
       "productId": "product-1",
-      "consignorName": "演示委托单位",
+      "consignorName": "省向体育用品有限公司",
       "inspectionDate": "2026-01-30",
-      "conclusion": "送检样品符合品牌方商品外观工艺特征。",
+      "conclusion": "经鉴定，该样品为真品。",
       "notes": [
-        "检验结果仅对送检样品负责。",
-        "对结果有异议请在15日内提出。"
+        "已核对外观。",
+        "已核对材质。",
+        "已核对工艺。"
       ],
-      "rawHtml": "<p>这里是原始报告 HTML（可选）。</p>",
+      "rawHtml": "<p>经鉴定，该样品为真品。</p>",
       "createdAt": "2026-03-13T00:00:00.000Z",
       "updatedAt": "2026-03-13T00:00:00.000Z"
     }
   ],
   "inspections": [
     {
+      "id": "745d11ef-e3ee-4f63-b1c2-8101b246463c",
+      "sn": "0000123457",
+      "productId": "product-1",
+      "companyId": "afe808d7-03c6-41b6-8dd5-1405ddca4ac2",
+      "inspectionTime": "2026-03-15T11:41:00.000Z",
+      "result": "PASS",
+      "status": "PUBLISHED",
+      "createdAt": "2026-03-15T03:41:37.757Z",
+      "updatedAt": "2026-03-15T03:41:37.757Z",
+      "conclusion": "经鉴定：通过。"
+    },
+    {
       "id": "inspection-1",
       "sn": "0000123456",
       "productId": "product-1",
       "companyId": "company-1",
       "inspectionTime": "2026-01-30T10:30:00.000Z",
-      "result": "PASS",
+      "result": "FAIL",
       "status": "PUBLISHED",
-      "conclusion": "Sample passed authentication checks.",
-      "productNameSnapshot": "LOUIS VUITTON",
-      "companyNameSnapshot": "CCIC Luxury Authentication Center",
+      "conclusion": "经鉴定：通过。",
       "createdAt": "2026-03-13T00:00:00.000Z",
-      "updatedAt": "2026-03-14T03:46:09.632Z"
+      "updatedAt": "2026-03-15T07:21:21.049Z"
     }
   ],
   "inspectionImages": [
@@ -166,23 +189,40 @@
   ],
   "inspectionEvents": [
     {
+      "id": "6c8be022-6582-4a85-a4b6-21f35d433b85",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T10:32:00.000Z",
+      "eventType": "CERTIFIED",
+      "title": "已检测",
+      "sortOrder": 2,
+      "createdAt": "2026-03-15T07:21:21.203Z"
+    },
+    {
+      "id": "d8eea166-0d2b-4f7f-94a0-1f9be783efc5",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T10:31:00.000Z",
+      "eventType": "INSPECTION",
+      "title": "检测中",
+      "sortOrder": 1,
+      "createdAt": "2026-03-15T07:21:21.194Z"
+    },
+    {
+      "id": "7df2a62c-c9bd-4285-a09d-7556d1082d8f",
+      "inspectionId": "inspection-1",
+      "eventTime": "2026-01-30T10:30:00.000Z",
+      "eventType": "SUBMIT",
+      "title": "已送检",
+      "sortOrder": 0,
+      "createdAt": "2026-03-15T07:21:21.181Z"
+    },
+    {
       "id": "inspection-event-1",
       "inspectionId": "inspection-1",
       "eventTime": "2026-01-30T08:00:00.000Z",
       "eventType": "SAMPLE_RECEIVED",
-      "title": "Sample received",
-      "content": "Consignor submitted the item for inspection.",
+      "title": "已送检",
+      "content": "样品已接收。",
       "sortOrder": 1,
-      "createdAt": "2026-03-13T00:00:00.000Z"
-    },
-    {
-      "id": "inspection-event-2",
-      "inspectionId": "inspection-1",
-      "eventTime": "2026-01-30T09:30:00.000Z",
-      "eventType": "INSPECTION",
-      "title": "Inspection completed",
-      "content": "Inspection steps completed by the lab team.",
-      "sortOrder": 2,
       "createdAt": "2026-03-13T00:00:00.000Z"
     },
     {
@@ -190,8 +230,8 @@
       "inspectionId": "inspection-1",
       "eventTime": "2026-01-30T10:30:00.000Z",
       "eventType": "CERTIFIED",
-      "title": "Certification issued",
-      "content": "Result published with PASS status.",
+      "title": "已检测",
+      "content": "检测完成并发布。",
       "sortOrder": 3,
       "createdAt": "2026-03-13T00:00:00.000Z"
     }
@@ -213,9 +253,9 @@
       "id": "trace-page-1",
       "sn": "SN-DEMO-0001",
       "indexBannerAssetIdsCsv": "media-hero-1,media-carousel-1",
-      "consignorName": "示例委托单位",
+      "consignorName": "省向体育用品有限公司",
       "inspectionDate": "2026-01-30",
-      "traceContent": "这是按 SN 查询的追溯信息示例内容。",
+      "traceContent": "该商品已完成鉴定，可通过SN查询。",
       "status": "PUBLISHED",
       "createdAt": "2026-03-13T00:00:00.000Z",
       "updatedAt": "2026-03-13T00:00:00.000Z"
@@ -227,8 +267,8 @@
       "traceCodeId": "trace-1",
       "eventTime": "2026-01-30T08:00:00.000Z",
       "eventType": "INSPECTION",
-      "title": "送检完成",
-      "content": "样品由委托方提交并完成登记。",
+      "title": "已送检",
+      "content": "已进入鉴定流程。",
       "sortOrder": 1,
       "createdAt": "2026-03-13T00:00:00.000Z"
     },
@@ -237,8 +277,8 @@
       "traceCodeId": "trace-1",
       "eventTime": "2026-01-30T10:30:00.000Z",
       "eventType": "CERTIFIED",
-      "title": "鉴定完成",
-      "content": "鉴定结论已生成并发布。",
+      "title": "已检测",
+      "content": "结果已发布。",
       "sortOrder": 2,
       "createdAt": "2026-03-13T00:00:00.000Z"
     }

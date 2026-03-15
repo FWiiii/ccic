@@ -1,13 +1,38 @@
-﻿import dotIcon from "../../assets/template/mu/static/picture/dot1.jpg";
+import dotIcon from "../../assets/template/mu/static/picture/dot1.jpg";
 import recordIcon from "../../assets/template/mu/static/picture/1.jpg";
 import toggleIcon from "../../assets/template/mu/static/picture/data3.jpg";
+
+export type TraceStatus = "SUBMITTED" | "INSPECTING" | "COMPLETED";
+
+export interface TraceStep {
+  status: TraceStatus;
+  label: string;
+  reached: boolean;
+}
 
 interface TraceInfoTabProps {
   expanded: boolean;
   onToggle: () => void;
+  currentStatus: TraceStatus;
+  steps: TraceStep[];
+  recordDate: string;
+  consignorName: string;
 }
 
-export function TraceInfoTab({ expanded, onToggle }: TraceInfoTabProps) {
+const statusLabelMap: Record<TraceStatus, string> = {
+  SUBMITTED: "\u5df2\u9001\u68c0",
+  INSPECTING: "\u68c0\u6d4b\u4e2d",
+  COMPLETED: "\u5df2\u68c0\u6d4b",
+};
+
+export function TraceInfoTab({
+  expanded,
+  onToggle,
+  currentStatus,
+  steps,
+  recordDate,
+  consignorName,
+}: TraceInfoTabProps) {
   return (
     <ul className="tab3-ul" id="ullist">
       <li style={{ width: "95%" }}>
@@ -24,13 +49,15 @@ export function TraceInfoTab({ expanded, onToggle }: TraceInfoTabProps) {
           style={{ padding: "14px", paddingLeft: "8px", paddingTop: 0, marginTop: "14px" }}
           onClick={onToggle}
         >
-          <span style={{ fontWeight: "bold", color: "#000", fontSize: "0.7rem" }}>委托单位简介</span>
+          <span style={{ fontWeight: "bold", color: "#000", fontSize: "0.7rem" }}>
+            {`\u8ffd\u6eaf\u72b6\u6001\uff08\u5f53\u524d\uff1a${statusLabelMap[currentStatus]}\uff09`}
+          </span>
           <div style={{ float: "right" }}>
             <span
               className="Icons"
               style={{ color: "#666", fontWeight: "bold", paddingRight: "8px", fontSize: "0.7rem" }}
             >
-              {expanded ? "收起" : "展开"}
+              {expanded ? "\u6536\u8d77" : "\u5c55\u5f00"}
             </span>
             <img
               className="showIcon"
@@ -81,7 +108,8 @@ export function TraceInfoTab({ expanded, onToggle }: TraceInfoTabProps) {
                 fontSize: "0.6rem",
               }}
             >
-              {" "}2026-1-30记录
+              {recordDate || "--"}
+              {"\u8bb0\u5f55"}
             </span>
           </div>
           <div
@@ -98,9 +126,17 @@ export function TraceInfoTab({ expanded, onToggle }: TraceInfoTabProps) {
               id="ccc"
             >
               <span style={{ color: "#333", fontWeight: "bold", display: "block", fontSize: "0.6rem" }}>
-                委托单位简介: <span id="vvv">港城国际</span>
+                {"\u59d4\u6258\u5355\u4f4d: "}
+                <span id="vvv">{consignorName || "-"}</span>
               </span>
             </label>
+
+            {steps.map((item) => (
+              <div className="traceInfo" key={item.status}>
+                <span className="traceInfo-tit">{item.label}</span>
+                <p className="traceInfo-dls">{item.reached ? "\u5df2\u5b8c\u6210" : "\u5f85\u5904\u7406"}</p>
+              </div>
+            ))}
 
             <div style={{ marginBottom: "10px" }}></div>
           </div>

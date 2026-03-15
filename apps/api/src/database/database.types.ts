@@ -84,8 +84,6 @@ export interface Inspection {
   result: InspectionResult;
   status: InspectionStatus;
   conclusion?: string;
-  productNameSnapshot?: string;
-  companyNameSnapshot?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,6 +113,14 @@ export interface PublicInspectionAggregateImage extends MediaAsset {
   sortOrder: number;
 }
 
+export type PublicInspectionTraceStatus = "SUBMITTED" | "INSPECTING" | "COMPLETED";
+
+export interface PublicInspectionTraceStep {
+  status: PublicInspectionTraceStatus;
+  label: string;
+  reached: boolean;
+}
+
 export interface PublicInspectionAggregate {
   inspectionAgencyName: string;
   inspection: Inspection;
@@ -122,6 +128,16 @@ export interface PublicInspectionAggregate {
   company: Company;
   images: PublicInspectionAggregateImage[];
   events: InspectionEvent[];
+  display: {
+    indexBannerImages: MediaAsset[];
+    productName: string;
+    consignorName: string;
+    verificationDate: string;
+    traceInfo: {
+      currentStatus: PublicInspectionTraceStatus;
+      steps: PublicInspectionTraceStep[];
+    };
+  };
 }
 
 export type TraceEventType = "SUBMIT" | "INSPECTION" | "CERTIFIED" | "UPDATED" | "OTHER";
@@ -230,3 +246,4 @@ export interface Database {
   traceVerifyLogs: TraceVerifyLog[];
   auditLogs: AuditLog[];
 }
+
