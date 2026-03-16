@@ -24,14 +24,14 @@ export function PageFooter() {
           className="button endpage-a external indexAOne"
           onClick={(event) => navigateWithoutReload(event, "/feedback")}
         >
-          <span className="endpage-span">{"\u6d88\u8d39\u53cd\u9988"}</span>
+          <span className="endpage-span">{"消费反馈"}</span>
         </a>
         <a
           className="button endpage-a external indexATwo"
           href="/search"
           onClick={(event) => navigateWithoutReload(event, "/search")}
         >
-          <span className="endpage-span-search ">{"\u9632\u4f2a\u67e5\u8be2"}</span>
+          <span className="endpage-span-search ">{"防伪查询"}</span>
         </a>
       </p>
     </nav>

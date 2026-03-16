@@ -15,7 +15,7 @@ import { SearchPage } from "./pages/SearchPage";
 import { TraceNotFoundPage } from "./pages/TraceNotFoundPage";
 
 const INSPECTION_AGENCY_FALLBACK =
-  "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
+  "中国检验认证集团奢侈品鉴定中心";
 
 const CompanyInfoTab = lazy(() =>
   import("./components/tabs/CompanyInfoTab").then((module) => ({ default: module.CompanyInfoTab }))
@@ -67,7 +67,7 @@ export default function App() {
 
         {status === "loading" ? (
           <div className="app-query-status">
-            {"\u6b63\u5728\u6839\u636e SN \u67e5\u8be2\u9274\u5b9a\u7ed3\u679c..."}
+            {"正在根据 SN 查询鉴定结果..."}
           </div>
         ) : null}
 
@@ -94,7 +94,7 @@ export default function App() {
                 className={`tab tabb app-tab-panel ${activeTab === "tabb" ? "active is-active" : "is-inactive"}`}
               >
                 {activeTab === "tabb" ? (
-                  <Suspense fallback={<div className="app-query-status">{"\u6b63\u5728\u52a0\u8f7d\u516c\u53f8\u7d20\u6750..."}</div>}>
+                  <Suspense fallback={<div className="app-query-status">{"正在加载公司素材..."}</div>}>
                     <CompanyInfoTab onPreview={setPreviewImage} />
                   </Suspense>
                 ) : null}
@@ -122,7 +122,7 @@ export default function App() {
             <div className="unsetshowthreediv">
               <span>
                 {errorMessage ||
-                  "\u6b64\u8ffd\u6eaf\u7801\u65e0\u6548\u3002\u53ef\u8054\u7cfb\u4e2d\u68c0\u6eaf\u6e90\u670d\u52a1\u70ed\u7ebf0512-67998071\u54a8\u8be2\u3002"}
+                  "此追溯码无效。可联系中检溯源服务热线0512-67998071咨询。"}
               </span>
             </div>
             <div className="ht50">
@@ -137,11 +137,11 @@ export default function App() {
           <div className="unsetshowdoublediv">
             <div className="unsetshowthreediv">
               <span>
-                {"\u4e0b\u8f7d\u8be5\u6587\u4ef6\u5c06\u4ea7\u751f"}
+                {"下载该文件将产生"}
                 <i className="c-font-normal" id="file-size"></i>
-                {"\u7684\u6d41\u91cf"}
+                {"的流量"}
               </span>
-              <span className="c-pt-0">{"\u662f\u5426\u786e\u8ba4\u4e0b\u8f7d?"}</span>
+              <span className="c-pt-0">{"是否确认下载?"}</span>
             </div>
             <div className="ht50">
               <a
@@ -150,10 +150,10 @@ export default function App() {
                 href="#"
                 onClick={(e) => e.preventDefault()}
               >
-                <span>{"\u786e\u8ba4"}</span>
+                <span>{"确认"}</span>
               </a>
               <div id="file-cancal-btn" className="download-btn-frame">
-                <span>{"\u53d6\u6d88"}</span>
+                <span>{"取消"}</span>
               </div>
             </div>
           </div>

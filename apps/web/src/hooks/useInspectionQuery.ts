@@ -38,7 +38,7 @@ export function useInspectionQuery({ querySn, isSearchPage, isFeedbackPage }: Us
       setState({
         status: "error",
         inspectionData: null,
-        errorMessage: "\u94fe\u63a5\u7f3a\u5c11 sn \u53c2\u6570\uff0c\u8bf7\u68c0\u67e5\u4e8c\u7ef4\u7801\u5730\u5740\u3002",
+        errorMessage: "链接缺少 sn 参数，请检查二维码地址。",
       });
       return;
     }
@@ -80,7 +80,7 @@ export function useInspectionQuery({ querySn, isSearchPage, isFeedbackPage }: Us
         const message =
           error instanceof Error && error.message
             ? error.message
-            : "\u67e5\u8be2\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002";
+            : "查询失败，请稍后重试。";
 
         setState({
           status: "error",

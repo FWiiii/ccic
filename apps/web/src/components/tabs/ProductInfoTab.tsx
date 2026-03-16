@@ -18,25 +18,25 @@ export function ProductInfoTab({ consignorName, verificationDate, conclusion }: 
     <div className="richTextContent app-richtext" id="richtext" style={{ display: "block" }}>
       <p style={paragraphStyle} id="dddd">
         <strong>
-          {"\u59d4\u6258\u5355\u4f4d\uff1a"}
+          {"委托单位："}
           {consignorName || "-"}
           <br />
-          {"\u6838\u9a8c\u65e5\u671f\uff1a"}
+          {"核验日期："}
           {verificationDate || "-"}
         </strong>
       </p>
 
       <p style={paragraphStyle}>
         <strong>
-          {"\u68c0\u9a8c\u7ed3\u8bba\uff1a"}
-          {conclusion || "\u9001\u68c0\u6837\u54c1\u7b26\u5408\u54c1\u724c\u65b9\u5546\u54c1\u5916\u89c2\u5de5\u827a\u7279\u5f81\u3002"}
+          {"检验结论："}
+          {conclusion || "送检样品符合品牌方商品外观工艺特征。"}
         </strong>
       </p>
 
       <p style={paragraphStyle}>
         <strong>
           {
-            "\u5907\u6ce8\uff1a1\u3001\u68c0\u9a8c\u7ed3\u679c\u4ec5\u5bf9\u9001\u68c0\u6837\u54c1\u8d1f\u8d23\uff0c\u82e5\u6807\u7b7e\u635f\u6bc1\u3001\u6807\u7b7e\u6d82\u6539\uff0c\u663e\u793a\u5185\u5bb9\u65e0\u6548\uff1b"
+            "备注：1、检验结果仅对送检样品负责，若标签损毁、标签涂改，显示内容无效；"
           }
         </strong>
       </p>
@@ -44,7 +44,7 @@ export function ProductInfoTab({ consignorName, verificationDate, conclusion }: 
       <p style={paragraphStyle}>
         <strong>
           {
-            "2\u3001\u82e5\u5bf9\u663e\u793a\u7684\u5185\u5bb9\u548c\u7ed3\u8bba\u6301\u6709\u5f02\u8bae\uff0c\u9700\u5728\u68c0\u9a8c\u65e5\u671f\u540e15\u65e5\u5185\u63d0\u51fa\uff0c\u903e\u671f\u4e0d\u4e88\u53d7\u7406\uff1b"
+            "2、若对显示的内容和结论持有异议，需在检验日期后15日内提出，逾期不予受理；"
           }
         </strong>
       </p>
@@ -52,7 +52,7 @@ export function ProductInfoTab({ consignorName, verificationDate, conclusion }: 
       <p style={paragraphStyle}>
         <strong>
           {
-            "3\u3001\u54c1\u724c\u65b9\u4e3a\u5546\u54c1\u7684\u8bbe\u8ba1\u53ca\u5236\u9020\u65b9\uff0c\u5982\u54c1\u724c\u65b9\u786e\u8ba4\u8be5\u9274\u5b9a\u6837\u54c1\u4e3a\u54c1\u724c\u65b9\u5236\u9020\u53ca\u9500\u552e\u5546\u54c1\uff0c\u4ee5\u54c1\u724c\u65b9\u7684\u7ed3\u8bba\u4e3a\u51c6\uff1b"
+            "3、品牌方为商品的设计及制造方，如品牌方确认该鉴定样品为品牌方制造及销售商品，以品牌方的结论为准；"
           }
         </strong>
       </p>
@@ -60,7 +60,7 @@ export function ProductInfoTab({ consignorName, verificationDate, conclusion }: 
       <p style={paragraphStyle}>
         <strong>
           {
-            "4\u3001\u5ba2\u6237\u4fe1\u606f\u53ca\u6837\u54c1\u5747\u7531\u59d4\u6258\u5355\u4f4d\u63d0\u4f9b\uff0c\u68c0\u9a8c\u7ed3\u679c\u4e0d\u6d89\u53ca\u6837\u54c1\u54c1\u8d28\u68c0\u6d4b\u7b49\u4fe1\u606f\u3002"
+            "4、客户信息及样品均由委托单位提供，检验结果不涉及样品品质检测等信息。"
           }
         </strong>
       </p>

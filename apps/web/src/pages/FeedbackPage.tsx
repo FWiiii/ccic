@@ -30,10 +30,10 @@ export function FeedbackPage() {
           <button className="button button-link button-nav pull-left complaintHeaderIn" type="button" onClick={goBack}>
             <div>
               <span className="icon icon-left complaints-a complaintA"></span>
-              <span className="complaints-span">{"\u8fd4\u56de"}</span>
+              <span className="complaints-span">{"返回"}</span>
             </div>
           </button>
-          <h1 className="title complaints-h1">{"\u6d88\u8d39\u53cd\u9988"}</h1>
+          <h1 className="title complaints-h1">{"消费反馈"}</h1>
         </header>
 
         <form className="content complaintContent" onSubmit={handleSubmit}>
@@ -48,7 +48,7 @@ export function FeedbackPage() {
                         required
                         className="complaintItemInput"
                         name="contacts"
-                        placeholder={"\u53cd\u9988\u4eba\u59d3\u540d"}
+                        placeholder={"反馈人姓名"}
                         id="co-name"
                         value={contacts}
                         onChange={(event) => setContacts(event.target.value)}
@@ -65,7 +65,7 @@ export function FeedbackPage() {
                       <input
                         type="text"
                         required
-                        placeholder={"\u8054\u7cfb\u7535\u8bdd"}
+                        placeholder={"联系电话"}
                         name="mobile"
                         className="complaintItemInput"
                         id="co-phonenum"
@@ -84,7 +84,7 @@ export function FeedbackPage() {
                       <input
                         type="email"
                         required
-                        placeholder={"\u90ae\u7bb1"}
+                        placeholder={"邮箱"}
                         name="email"
                         className="complaintItemInput"
                         id="co-email"
@@ -101,7 +101,7 @@ export function FeedbackPage() {
                   <div className="item-inner">
                     <div className="item-input">
                       <textarea
-                        placeholder={"\u53cd\u9988\u5185\u5bb9"}
+                        placeholder={"反馈内容"}
                         name="content"
                         required
                         className="complaintItemInput"
@@ -121,14 +121,14 @@ export function FeedbackPage() {
           </div>
 
           <button className="complaints-span2" id="complaintsbutton" type="submit">
-            {"\u63d0\u4ea4"}
+            {"提交"}
           </button>
         </form>
 
         <div id="complaintshow" className="complaintShowDiv" style={{ display: showSuccess ? "block" : "none" }}>
           <div className="complaintShowDivTwo">
             <div className="complaintShowDivThree">
-              <span>{"\u53cd\u9988\u6210\u529f"}</span>
+              <span>{"反馈成功"}</span>
             </div>
             <div className="complaintShowDivFour">
               <div id="showcomplaints" className="complaintShowDivFive" onClick={closeSuccess}>

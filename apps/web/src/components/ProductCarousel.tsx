@@ -99,7 +99,7 @@ export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
               ))
             ) : (
               <div className="swiper-slide" style={{ height: "270px", display: "grid", placeItems: "center" }}>
-                <span style={{ color: "#999", fontSize: "14px" }}>鏆傛棤鍟嗗搧鍥剧墖</span>
+                <span style={{ color: "#999", fontSize: "14px" }}>暂无轮播图</span>
               </div>
             )}
           </div>
