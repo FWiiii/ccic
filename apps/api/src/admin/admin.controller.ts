@@ -12,6 +12,7 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import { AdminAuthGuard } from "../auth/admin-auth.guard";
 import { DatabaseService } from "../database/database.service";
 import type {
@@ -28,6 +29,7 @@ import type {
   TracePage,
   VerifyStatus,
 } from "../database/database.types";
+import { PrismaService } from "../database/prisma.service";
 import { R2StorageService } from "../media/r2-storage.service";
 
 const isPublishStatus = (value: unknown): value is PublishStatus =>
@@ -64,12 +66,57 @@ const parseAssetIdsCsv = (value: unknown) =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const DEFAULT_LIST_PAGE = 1;
+const DEFAULT_LIST_PAGE_SIZE = 20;
+const MAX_LIST_PAGE_SIZE = 200;
+
+const toSafePositiveInt = (value: unknown, fallback: number) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return fallback;
+  }
+
+  return Math.max(1, Math.floor(num));
+};
+
+const parseListPagination = (rawPage: unknown, rawPageSize: unknown) => {
+  const hasPagination = rawPage !== undefined || rawPageSize !== undefined;
+  if (!hasPagination) {
+    return {
+      page: undefined,
+      pageSize: undefined,
+      skip: undefined,
+      take: undefined,
+    };
+  }
+
+  const page = toSafePositiveInt(rawPage, DEFAULT_LIST_PAGE);
+  const requestedPageSize = toSafePositiveInt(rawPageSize, DEFAULT_LIST_PAGE_SIZE);
+  const pageSize = Math.min(MAX_LIST_PAGE_SIZE, requestedPageSize);
+  const skip = (page - 1) * pageSize;
+
+  return { page, pageSize, skip, take: pageSize };
+};
+
+const parseListSortOrder = (rawValue: unknown): "asc" | "desc" =>
+  String(rawValue ?? "").toLowerCase() === "asc" ? "asc" : "desc";
+
+const resolveListSortField = <T extends string>(
+  rawSortBy: unknown,
+  allowed: readonly T[],
+  fallback: T
+): T => {
+  const sortBy = String(rawSortBy ?? "").trim();
+  return (allowed as readonly string[]).includes(sortBy) ? (sortBy as T) : fallback;
+};
+
 @UseGuards(AdminAuthGuard)
 @Controller("api/admin")
 export class AdminController {
   constructor(
     private readonly databaseService: DatabaseService,
-    private readonly r2StorageService: R2StorageService
+    private readonly r2StorageService: R2StorageService,
+    private readonly prisma: PrismaService
   ) {}
 
   @Get("bootstrap")
@@ -116,9 +163,54 @@ export class AdminController {
   }
 
   @Get("media")
-  async listMedia() {
-    const db = await this.databaseService.readDb();
-    return { data: db.mediaAssets };
+  async listMedia(
+    @Query("name") queryName?: string,
+    @Query("mimeType") queryMimeType?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(querySortBy, ["createdAt", "name", "mimeType", "sizeBytes"] as const, "createdAt");
+    const sortOrder = parseListSortOrder(querySortOrder);
+
+    const name = String(queryName ?? "").trim();
+    const mimeType = String(queryMimeType ?? "").trim();
+
+    const where: Prisma.MediaAssetWhereInput = {};
+    if (name) {
+      where.name = { contains: name, mode: "insensitive" };
+    }
+
+    if (mimeType) {
+      where.mimeType = { contains: mimeType, mode: "insensitive" };
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.mediaAsset.count({ where }),
+      this.prisma.mediaAsset.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: MediaAsset[] = rows.map((item) => ({
+      id: item.id,
+      url: item.url,
+      name: item.name,
+      mimeType: item.mimeType,
+      sizeBytes: Number(item.sizeBytes),
+      width: item.width ?? undefined,
+      height: item.height ?? undefined,
+      createdAt: item.createdAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("media")
@@ -223,9 +315,58 @@ export class AdminController {
   }
 
   @Get("companies")
-  async listCompanies() {
-    const db = await this.databaseService.readDb();
-    return { data: db.companies };
+  async listCompanies(
+    @Query("name") queryName?: string,
+    @Query("status") queryStatus?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(querySortBy, ["createdAt", "updatedAt", "name", "status"] as const, "updatedAt");
+    const sortOrder = parseListSortOrder(querySortOrder);
+
+    const name = String(queryName ?? "").trim();
+    const status = String(queryStatus ?? "").trim();
+    if (status && !isPublishStatus(status)) {
+      throw new HttpException({ message: "status must be DRAFT/PUBLISHED/ARCHIVED" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const where: Prisma.CompanyWhereInput = {};
+    if (name) {
+      where.name = { contains: name, mode: "insensitive" };
+    }
+    if (status) {
+      where.status = status;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.company.count({ where }),
+      this.prisma.company.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: Company[] = rows.map((item) => ({
+      id: item.id,
+      name: item.name,
+      shortName: item.shortName ?? undefined,
+      phone: item.phone ?? undefined,
+      address: item.address ?? undefined,
+      descriptionHtml: item.descriptionHtml ?? undefined,
+      logoAssetId: item.logoAssetId ?? undefined,
+      status: item.status as Company["status"],
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("companies")
@@ -360,9 +501,70 @@ export class AdminController {
   }
 
   @Get("products")
-  async listProducts() {
-    const db = await this.databaseService.readDb();
-    return { data: db.products };
+  async listProducts(
+    @Query("name") queryName?: string,
+    @Query("companyId") queryCompanyId?: string,
+    @Query("status") queryStatus?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(
+      querySortBy,
+      ["createdAt", "updatedAt", "name", "status", "publishedAt"] as const,
+      "updatedAt"
+    );
+    const sortOrder = parseListSortOrder(querySortOrder);
+
+    const name = String(queryName ?? "").trim();
+    const companyId = String(queryCompanyId ?? "").trim();
+    const status = String(queryStatus ?? "").trim();
+    if (status && !isPublishStatus(status)) {
+      throw new HttpException({ message: "status must be DRAFT/PUBLISHED/ARCHIVED" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const where: Prisma.ProductWhereInput = {};
+    if (name) {
+      where.name = { contains: name, mode: "insensitive" };
+    }
+    if (companyId) {
+      where.companyId = companyId;
+    }
+    if (status) {
+      where.status = status;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.product.count({ where }),
+      this.prisma.product.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: Product[] = rows.map((item) => ({
+      id: item.id,
+      sku: item.sku ?? undefined,
+      name: item.name,
+      brand: item.brand ?? undefined,
+      model: item.model ?? undefined,
+      material: item.material ?? undefined,
+      summary: item.summary ?? undefined,
+      productInfoHtml: item.productInfoHtml ?? undefined,
+      companyId: item.companyId,
+      status: item.status as Product["status"],
+      publishedAt: item.publishedAt?.toISOString(),
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("products")
@@ -534,13 +736,45 @@ export class AdminController {
   }
 
   @Get("product-images")
-  async listProductImages(@Query("productId") queryProductId?: string) {
+  async listProductImages(
+    @Query("productId") queryProductId?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
     const productId = String(queryProductId ?? "").trim();
-    const db = await this.databaseService.readDb();
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(querySortBy, ["sortOrder", "scene", "createdAt"] as const, "sortOrder");
+    const sortOrder = parseListSortOrder(querySortOrder);
 
-    return {
-      data: productId ? db.productImages.filter((item) => item.productId === productId) : db.productImages,
-    };
+    const where: Prisma.ProductImageWhereInput = {};
+    if (productId) {
+      where.productId = productId;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.productImage.count({ where }),
+      this.prisma.productImage.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: ProductImage[] = rows.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      assetId: item.assetId,
+      scene: item.scene as ProductImage["scene"],
+      sortOrder: item.sortOrder,
+      createdAt: item.createdAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("product-images")
@@ -652,7 +886,11 @@ export class AdminController {
     @Query("sn") querySn?: string,
     @Query("productId") queryProductId?: string,
     @Query("companyId") queryCompanyId?: string,
-    @Query("status") queryStatus?: string
+    @Query("status") queryStatus?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
   ) {
     const sn = String(querySn ?? "").trim();
     const productId = String(queryProductId ?? "").trim();
@@ -666,17 +904,54 @@ export class AdminController {
       );
     }
 
-    const db = await this.databaseService.readDb();
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(
+      querySortBy,
+      ["createdAt", "updatedAt", "inspectionTime", "sn", "status"] as const,
+      "inspectionTime"
+    );
+    const sortOrder = parseListSortOrder(querySortOrder);
 
-    return {
-      data: db.inspections.filter(
-        (item) =>
-          (!sn || item.sn === sn) &&
-          (!productId || item.productId === productId) &&
-          (!companyId || item.companyId === companyId) &&
-          (!status || item.status === status)
-      ),
-    };
+    const where: Prisma.InspectionWhereInput = {};
+    if (sn) {
+      where.sn = sn;
+    }
+    if (productId) {
+      where.productId = productId;
+    }
+    if (companyId) {
+      where.companyId = companyId;
+    }
+    if (status) {
+      where.status = status;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.inspection.count({ where }),
+      this.prisma.inspection.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: Inspection[] = rows.map((item) => ({
+      id: item.id,
+      sn: item.sn,
+      productId: item.productId,
+      companyId: item.companyId,
+      inspectionTime: item.inspectionTime.toISOString(),
+      result: item.result as Inspection["result"],
+      status: item.status as Inspection["status"],
+      conclusion: item.conclusion ?? undefined,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("inspections")
@@ -939,15 +1214,45 @@ export class AdminController {
   }
 
   @Get("inspection-images")
-  async listInspectionImages(@Query("inspectionId") queryInspectionId?: string) {
+  async listInspectionImages(
+    @Query("inspectionId") queryInspectionId?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
     const inspectionId = String(queryInspectionId ?? "").trim();
-    const db = await this.databaseService.readDb();
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(querySortBy, ["sortOrder", "scene", "createdAt"] as const, "sortOrder");
+    const sortOrder = parseListSortOrder(querySortOrder);
 
-    return {
-      data: inspectionId
-        ? db.inspectionImages.filter((item) => item.inspectionId === inspectionId)
-        : db.inspectionImages,
-    };
+    const where: Prisma.InspectionImageWhereInput = {};
+    if (inspectionId) {
+      where.inspectionId = inspectionId;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.inspectionImage.count({ where }),
+      this.prisma.inspectionImage.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: InspectionImage[] = rows.map((item) => ({
+      id: item.id,
+      inspectionId: item.inspectionId,
+      assetId: item.assetId,
+      scene: item.scene as InspectionImage["scene"],
+      sortOrder: item.sortOrder,
+      createdAt: item.createdAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("inspection-images")
@@ -1121,15 +1426,45 @@ export class AdminController {
   }
 
   @Get("inspection-events")
-  async listInspectionEvents(@Query("inspectionId") queryInspectionId?: string) {
+  async listInspectionEvents(
+    @Query("inspectionId") queryInspectionId?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
     const inspectionId = String(queryInspectionId ?? "").trim();
-    const db = await this.databaseService.readDb();
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(querySortBy, ["eventTime", "sortOrder", "createdAt"] as const, "eventTime");
+    const sortOrder = parseListSortOrder(querySortOrder);
 
-    return {
-      data: inspectionId
-        ? db.inspectionEvents.filter((item) => item.inspectionId === inspectionId)
-        : db.inspectionEvents,
-    };
+    const where: Prisma.InspectionEventWhereInput = {};
+    if (inspectionId) {
+      where.inspectionId = inspectionId;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.inspectionEvent.count({ where }),
+      this.prisma.inspectionEvent.findMany({
+        where,
+        orderBy: [{ [sortBy]: sortOrder }, { sortOrder: "asc" }],
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: InspectionEvent[] = rows.map((item) => ({
+      id: item.id,
+      inspectionId: item.inspectionId,
+      eventTime: item.eventTime.toISOString(),
+      eventType: item.eventType as InspectionEvent["eventType"],
+      title: item.title,
+      content: item.content ?? undefined,
+      sortOrder: item.sortOrder,
+      createdAt: item.createdAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("inspection-events")
@@ -1289,9 +1624,87 @@ export class AdminController {
   }
 
   @Get("trace-pages")
-  async listTracePages() {
-    const db = await this.databaseService.readDb();
-    return { data: db.tracePages };
+  async listTracePages(
+    @Query("sn") querySn?: string,
+    @Query("status") queryStatus?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(
+      querySortBy,
+      ["updatedAt", "createdAt", "sn", "status"] as const,
+      "updatedAt"
+    );
+    const sortOrder = parseListSortOrder(querySortOrder);
+
+    const sn = String(querySn ?? "").trim();
+    const status = String(queryStatus ?? "").trim();
+    if (status && !isPublishStatus(status)) {
+      throw new HttpException({ message: "status must be DRAFT/PUBLISHED/ARCHIVED" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const where: Prisma.TracePageWhereInput = {};
+    if (sn) {
+      where.sn = sn;
+    }
+    if (status) {
+      where.status = status;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.tracePage.count({ where }),
+      this.prisma.tracePage.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const tracePageIds = rows.map((item) => item.id);
+    const banners =
+      tracePageIds.length > 0
+        ? await this.prisma.tracePageBanner.findMany({
+            where: {
+              tracePageId: { in: tracePageIds },
+            },
+            orderBy: [{ sortOrder: "asc" }],
+          })
+        : [];
+
+    const bannerMap = new Map<string, Array<{ assetId: string; sortOrder: number }>>();
+    for (const banner of banners) {
+      const list = bannerMap.get(banner.tracePageId) ?? [];
+      list.push({ assetId: banner.assetId, sortOrder: banner.sortOrder });
+      bannerMap.set(banner.tracePageId, list);
+    }
+
+    const data: TracePage[] = rows.map((item) => {
+      const bannersRaw = bannerMap.get(item.id) ?? [];
+      const indexBannerAssetIdsCsv = bannersRaw
+        .sort((left, right) => left.sortOrder - right.sortOrder)
+        .map((entry) => entry.assetId)
+        .join(",");
+
+      return {
+        id: item.id,
+        sn: item.sn,
+        indexBannerAssetIdsCsv,
+        consignorName: item.consignorName ?? undefined,
+        inspectionDate: item.inspectionDate ? item.inspectionDate.toISOString().slice(0, 10) : undefined,
+        traceContent: item.traceContent ?? undefined,
+        status: item.status as TracePage["status"],
+        createdAt: item.createdAt.toISOString(),
+        updatedAt: item.updatedAt.toISOString(),
+      };
+    });
+
+    return { data, total, page, pageSize };
   }
 
   @Post("trace-pages")
@@ -1534,9 +1947,69 @@ export class AdminController {
     return result;
   }
   @Get("trace-codes")
-  async listTraceCodes() {
-    const db = await this.databaseService.readDb();
-    return { data: db.traceCodes };
+  async listTraceCodes(
+    @Query("code") queryCode?: string,
+    @Query("productId") queryProductId?: string,
+    @Query("verifyStatus") queryVerifyStatus?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(
+      querySortBy,
+      ["createdAt", "code", "verifyStatus", "verifyCount", "lastVerifiedAt", "expiresAt"] as const,
+      "createdAt"
+    );
+    const sortOrder = parseListSortOrder(querySortOrder);
+
+    const code = String(queryCode ?? "").trim();
+    const productId = String(queryProductId ?? "").trim();
+    const verifyStatus = String(queryVerifyStatus ?? "").trim();
+    if (verifyStatus && !isVerifyStatus(verifyStatus)) {
+      throw new HttpException(
+        { message: "verifyStatus must be VALID/INVALID/EXPIRED/REVOKED" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const where: Prisma.TraceCodeWhereInput = {};
+    if (code) {
+      where.code = code;
+    }
+    if (productId) {
+      where.productId = productId;
+    }
+    if (verifyStatus) {
+      where.verifyStatus = verifyStatus;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.traceCode.count({ where }),
+      this.prisma.traceCode.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: TraceCode[] = rows.map((item) => ({
+      id: item.id,
+      code: item.code,
+      productId: item.productId,
+      verifyStatus: item.verifyStatus as TraceCode["verifyStatus"],
+      verifyCount: item.verifyCount,
+      firstVerifiedAt: item.firstVerifiedAt?.toISOString(),
+      lastVerifiedAt: item.lastVerifiedAt?.toISOString(),
+      expiresAt: item.expiresAt?.toISOString(),
+      createdAt: item.createdAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("trace-codes")
@@ -1651,13 +2124,45 @@ export class AdminController {
   }
 
   @Get("trace-events")
-  async listTraceEvents(@Query("traceCodeId") queryTraceCodeId?: string) {
+  async listTraceEvents(
+    @Query("traceCodeId") queryTraceCodeId?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
     const traceCodeId = String(queryTraceCodeId ?? "").trim();
-    const db = await this.databaseService.readDb();
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(querySortBy, ["eventTime", "sortOrder", "createdAt"] as const, "eventTime");
+    const sortOrder = parseListSortOrder(querySortOrder);
 
-    return {
-      data: traceCodeId ? db.traceEvents.filter((item) => item.traceCodeId === traceCodeId) : db.traceEvents,
-    };
+    const where: Prisma.TraceEventWhereInput = {};
+    if (traceCodeId) {
+      where.traceCodeId = traceCodeId;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.traceEvent.count({ where }),
+      this.prisma.traceEvent.findMany({
+        where,
+        orderBy: [{ [sortBy]: sortOrder }, { sortOrder: "asc" }],
+        skip,
+        take,
+      }),
+    ]);
+
+    const data: TraceEvent[] = rows.map((item) => ({
+      id: item.id,
+      traceCodeId: item.traceCodeId,
+      eventTime: item.eventTime.toISOString(),
+      eventType: item.eventType as TraceEvent["eventType"],
+      title: item.title,
+      content: item.content ?? undefined,
+      sortOrder: item.sortOrder,
+      createdAt: item.createdAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
   }
 
   @Post("trace-events")
