@@ -1,6 +1,6 @@
 # CCIC 鉴定查询项目实施方案（合并版）
 
-最后更新：2026-03-15
+最后更新：2026-03-16
 
 ## 1. 业务目标
 
@@ -29,11 +29,14 @@ ccic/
 ├─ apps/
 │  ├─ web/                      # 前台（Vite + React）
 │  ├─ admin/                    # 后台（Refine + Ant Design）
-│  └─ api/                      # 后端（NestJS）
+│  └─ api/                      # 后端（NestJS + Prisma）
 ├─ packages/
-│  └─ shared-types/             # 共享类型
+│  ├─ shared-types/             # 共享类型
+│  ├─ eslint-config/            # 预留（共享 ESLint 配置）
+│  └─ tsconfig/                 # 预留（共享 TS 配置）
 ├─ infra/
-│  └─ sql/001_init_schema_postgres.sql
+│  ├─ sql/001_init_schema_postgres.sql
+│  └─ nginx/                    # 预留（网关/反代模板）
 ├─ docs/
 │  └─ bootstrap-scaffold.md
 └─ IMPLEMENTATION_PLAN.md       # 本文档（权威）
@@ -41,9 +44,11 @@ ccic/
 
 ## 3. 已完成（按当前代码）
 
-### 3.1 数据模型（JSON 存储）
+### 3.1 数据模型与存储（PostgreSQL）
 
-已引入 inspection 聚合模型：
+当前后端已切换为 PostgreSQL 作为唯一运行时存储，`DATABASE_URL` 必填。
+
+已落地的数据模型包括：
 
 - `inspections`
 - `inspectionImages`
@@ -51,8 +56,11 @@ ccic/
 - `products`
 - `companies`（用于“送检公司”）
 - `mediaAssets`
+- `traceCodes / traceEvents / tracePages`（兼容链路）
 
-数据文件：`apps/api/data/db.json`
+初始化 SQL：`infra/sql/001_init_schema_postgres.sql`
+
+补充说明：历史 JSON 数据只支持通过导入脚本一次性迁移，不再作为运行时数据源。
 
 ### 3.2 公开接口
 
@@ -118,7 +126,7 @@ ccic/
 
 ### 5.3 P3
 
-- 存储从 JSON 迁移到 PostgreSQL（可参考 `infra/sql/001_init_schema_postgres.sql`）
+- 增加 Prisma migration 与种子数据流程，替代手工 SQL 初始化
 - 引入更完整的权限/审计模型（RBAC + 审计日志）
 
 ## 6. 部署与运维建议
@@ -128,4 +136,4 @@ ccic/
   - `/admin` -> `apps/admin`
   - `/api` -> `apps/api`
 - 图片建议使用对象存储，数据库仅存元数据
-- 当前 JSON 方案适合开发联调，不建议生产环境直接使用
+- 生产环境必须使用 PostgreSQL，不再支持 JSON 文件作为运行时存储

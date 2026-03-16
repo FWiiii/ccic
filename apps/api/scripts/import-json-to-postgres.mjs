@@ -1,7 +1,7 @@
 import { Client } from "pg";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 
 const publishStatuses = new Set(["DRAFT", "PUBLISHED", "ARCHIVED"]);
@@ -88,10 +88,17 @@ async function main() {
     throw new Error("DATABASE_URL is required");
   }
 
-  const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-  const apiRoot = path.resolve(scriptDir, "..");
-  const defaultJsonPath = path.join(apiRoot, "data", "db.json");
-  const jsonPath = process.env.DB_JSON_PATH ? path.resolve(process.env.DB_JSON_PATH) : defaultJsonPath;
+  const rawJsonPath = String(process.env.DB_JSON_PATH ?? "").trim();
+  if (!rawJsonPath) {
+    throw new Error(
+      "DB_JSON_PATH is required. The repository no longer bundles apps/api/data/db.json; provide an explicit legacy JSON path."
+    );
+  }
+
+  const jsonPath = path.resolve(rawJsonPath);
+  await access(jsonPath, fsConstants.R_OK).catch(() => {
+    throw new Error(`DB_JSON_PATH is not readable: ${jsonPath}`);
+  });
 
   const rawText = await readFile(jsonPath, "utf8");
   const raw = JSON.parse(rawText);
