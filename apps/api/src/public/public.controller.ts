@@ -76,9 +76,24 @@ const buildTraceSteps = (
   }));
 };
 
+const isLegacyTraceApiEnabled = () => String(process.env.ENABLE_LEGACY_TRACE_APIS ?? "").toLowerCase() === "true";
+
 @Controller(["api/public", "api/v1/public"])
 export class PublicController {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  private assertLegacyTraceApiEnabled() {
+    if (isLegacyTraceApiEnabled()) {
+      return;
+    }
+
+    throw new HttpException(
+      {
+        message: "Legacy trace API is decommissioned. Set ENABLE_LEGACY_TRACE_APIS=true to temporarily re-enable.",
+      },
+      HttpStatus.GONE
+    );
+  }
 
   @Get("inspection")
   async getInspectionBySn(@Query("sn") rawSn: string) {
@@ -158,6 +173,8 @@ export class PublicController {
 
   @Get("traces/:code")
   async getTrace(@Param("code") rawCode: string) {
+    this.assertLegacyTraceApiEnabled();
+
     const code = String(rawCode ?? "").trim();
 
     if (!code) {
@@ -223,6 +240,8 @@ export class PublicController {
 
   @Get("trace-pages/:sn")
   async getTracePageBySn(@Param("sn") rawSn: string) {
+    this.assertLegacyTraceApiEnabled();
+
     const sn = String(rawSn ?? "").trim();
 
     if (!sn) {

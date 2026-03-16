@@ -110,6 +110,8 @@ const resolveListSortField = <T extends string>(
   return (allowed as readonly string[]).includes(sortBy) ? (sortBy as T) : fallback;
 };
 
+const isLegacyTraceApiEnabled = () => String(process.env.ENABLE_LEGACY_TRACE_APIS ?? "").toLowerCase() === "true";
+
 @UseGuards(AdminAuthGuard)
 @Controller("api/admin")
 export class AdminController {
@@ -118,6 +120,20 @@ export class AdminController {
     private readonly r2StorageService: R2StorageService,
     private readonly prisma: PrismaService
   ) {}
+
+  private assertLegacyTraceApiEnabled() {
+    if (isLegacyTraceApiEnabled()) {
+      return;
+    }
+
+    throw new HttpException(
+      {
+        message:
+          "Legacy trace admin API is decommissioned. Set ENABLE_LEGACY_TRACE_APIS=true to temporarily re-enable.",
+      },
+      HttpStatus.GONE
+    );
+  }
 
   @Get("bootstrap")
   async bootstrap() {
@@ -1362,6 +1378,8 @@ export class AdminController {
     @Query("sortBy") querySortBy?: string,
     @Query("sortOrder") querySortOrder?: string
   ) {
+    this.assertLegacyTraceApiEnabled();
+
     const inspectionId = String(queryInspectionId ?? "").trim();
     const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
     const sortBy = resolveListSortField(querySortBy, ["sortOrder", "scene", "createdAt"] as const, "sortOrder");
@@ -1398,6 +1416,8 @@ export class AdminController {
 
   @Post("inspection-images")
   async createInspectionImage(@Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const inspectionId = String(body?.inspectionId ?? "").trim();
     const assetId = String(body?.assetId ?? "").trim();
     const scene = String(body?.scene ?? "").trim();
@@ -1459,6 +1479,8 @@ export class AdminController {
 
   @Put("inspection-images/:id")
   async updateInspectionImage(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const result = await this.databaseService.mutateDb((db) => {
       const item = db.inspectionImages.find((entry) => entry.id === id);
       if (!item) {
@@ -1551,6 +1573,8 @@ export class AdminController {
   @Delete("inspection-images/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteInspectionImage(@Param("id") id: string) {
+    this.assertLegacyTraceApiEnabled();
+
     const ok = await this.databaseService.mutateDb((db) => {
       const index = db.inspectionImages.findIndex((entry) => entry.id === id);
       if (index < 0) {
@@ -1844,6 +1868,8 @@ export class AdminController {
     @Query("sortBy") querySortBy?: string,
     @Query("sortOrder") querySortOrder?: string
   ) {
+    this.assertLegacyTraceApiEnabled();
+
     const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
     const sortBy = resolveListSortField(
       querySortBy,
@@ -1921,6 +1947,8 @@ export class AdminController {
 
   @Post("trace-pages")
   async createTracePage(@Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const sn = String(body?.sn ?? "").trim();
 
     if (!sn) {
@@ -1977,6 +2005,8 @@ export class AdminController {
 
   @Put("trace-pages/:id")
   async updateTracePage(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const result = await this.databaseService.mutateDb((db) => {
       const item = db.tracePages.find((entry) => entry.id === id);
       if (!item) {
@@ -2061,6 +2091,8 @@ export class AdminController {
   @Delete("trace-pages/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteTracePage(@Param("id") id: string) {
+    this.assertLegacyTraceApiEnabled();
+
     const ok = await this.databaseService.mutateDb((db) => {
       const index = db.tracePages.findIndex((entry) => entry.id === id);
       if (index < 0) {
@@ -2078,6 +2110,8 @@ export class AdminController {
 
   @Put("trace-pages/by-sn/:sn")
   async upsertTracePageBySn(@Param("sn") rawSn: string, @Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const sn = String(rawSn ?? "").trim();
 
     if (!sn) {
@@ -2168,6 +2202,8 @@ export class AdminController {
     @Query("sortBy") querySortBy?: string,
     @Query("sortOrder") querySortOrder?: string
   ) {
+    this.assertLegacyTraceApiEnabled();
+
     const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
     const sortBy = resolveListSortField(
       querySortBy,
@@ -2226,6 +2262,8 @@ export class AdminController {
 
   @Post("trace-codes")
   async createTraceCode(@Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const code = String(body?.code ?? "").trim();
     const productId = String(body?.productId ?? "").trim();
 
@@ -2270,6 +2308,8 @@ export class AdminController {
 
   @Put("trace-codes/:id")
   async updateTraceCode(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const data = await this.databaseService.mutateDb((db) => {
       const item = db.traceCodes.find((entry) => entry.id === id);
       if (!item) {
@@ -2318,6 +2358,8 @@ export class AdminController {
   @Delete("trace-codes/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteTraceCode(@Param("id") id: string) {
+    this.assertLegacyTraceApiEnabled();
+
     const ok = await this.databaseService.mutateDb((db) => {
       const index = db.traceCodes.findIndex((entry) => entry.id === id);
       if (index < 0) {
@@ -2343,6 +2385,8 @@ export class AdminController {
     @Query("sortBy") querySortBy?: string,
     @Query("sortOrder") querySortOrder?: string
   ) {
+    this.assertLegacyTraceApiEnabled();
+
     const traceCodeId = String(queryTraceCodeId ?? "").trim();
     const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
     const sortBy = resolveListSortField(querySortBy, ["eventTime", "sortOrder", "createdAt"] as const, "eventTime");
@@ -2379,6 +2423,8 @@ export class AdminController {
 
   @Post("trace-events")
   async createTraceEvent(@Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const traceCodeId = String(body?.traceCodeId ?? "").trim();
     const title = String(body?.title ?? "").trim();
 
@@ -2418,6 +2464,8 @@ export class AdminController {
 
   @Put("trace-events/:id")
   async updateTraceEvent(@Param("id") id: string, @Body() body: Record<string, unknown>) {
+    this.assertLegacyTraceApiEnabled();
+
     const data = await this.databaseService.mutateDb((db) => {
       const item = db.traceEvents.find((entry) => entry.id === id);
       if (!item) {
@@ -2457,6 +2505,8 @@ export class AdminController {
   @Delete("trace-events/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteTraceEvent(@Param("id") id: string) {
+    this.assertLegacyTraceApiEnabled();
+
     const ok = await this.databaseService.mutateDb((db) => {
       const index = db.traceEvents.findIndex((entry) => entry.id === id);
       if (index < 0) {

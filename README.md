@@ -96,3 +96,16 @@ npm run dev:admin
 - `packages/tsconfig`
 
 当前默认运行链路不依赖这三个目录，可按需要逐步接入。
+
+## Legacy Trace Decommission
+
+- Legacy trace APIs are now controlled by `ENABLE_LEGACY_TRACE_APIS` (default: `false`).
+- When disabled, these endpoints return `410 Gone`:
+  - `GET /api/public/traces/:code`
+  - `GET /api/public/trace-pages/:sn`
+  - Admin legacy trace/inspection-image endpoints under `/api/admin/*`.
+- After confirming no dependency on legacy trace APIs, run:
+
+```bash
+psql "$DATABASE_URL" -f infra/sql/002_decommission_legacy_trace_tables.sql
+```

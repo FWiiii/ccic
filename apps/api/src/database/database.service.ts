@@ -327,16 +327,8 @@ export class DatabaseService {
       companies,
       products,
       productImages,
-      inspectionReports,
       inspections,
-      inspectionImages,
       inspectionEvents,
-      tracePages,
-      tracePageBanners,
-      traceCodes,
-      traceEvents,
-      traceVerifyLogs,
-      auditLogs,
     ] = await Promise.all([
       this.prisma.adminUser.findMany(),
       this.prisma.adminSession.findMany(),
@@ -344,33 +336,11 @@ export class DatabaseService {
       this.prisma.company.findMany(),
       this.prisma.product.findMany(),
       this.prisma.productImage.findMany({ orderBy: [{ sortOrder: "asc" }] }),
-      this.prisma.inspectionReport.findMany(),
       this.prisma.inspection.findMany(),
-      this.prisma.inspectionImage.findMany({ orderBy: [{ sortOrder: "asc" }] }),
       this.prisma.inspectionEvent.findMany({ orderBy: [{ eventTime: "desc" }, { sortOrder: "asc" }] }),
-      this.prisma.tracePage.findMany(),
-      this.prisma.tracePageBanner.findMany({ orderBy: [{ sortOrder: "asc" }] }),
-      this.prisma.traceCode.findMany(),
-      this.prisma.traceEvent.findMany({ orderBy: [{ eventTime: "desc" }, { sortOrder: "asc" }] }),
-      this.prisma.traceVerifyLog.findMany({ orderBy: [{ verifyAt: "desc" }] }),
-      this.prisma.auditLog.findMany({ orderBy: [{ createdAt: "desc" }] }),
     ]);
 
     const now = this.nowIso();
-
-    const tracePageBannerMap = new Map<string, Array<{ assetId: string; sortOrder: number }>>();
-    for (const item of tracePageBanners) {
-      const list = tracePageBannerMap.get(item.tracePageId) ?? [];
-      list.push({
-        assetId: item.assetId,
-        sortOrder: item.sortOrder,
-      });
-      tracePageBannerMap.set(item.tracePageId, list);
-    }
-
-    for (const list of tracePageBannerMap.values()) {
-      list.sort((left, right) => left.sortOrder - right.sortOrder);
-    }
 
     return {
       ...EMPTY_DB,
@@ -431,17 +401,7 @@ export class DatabaseService {
         sortOrder: item.sortOrder,
         createdAt: toIsoString(item.createdAt, now),
       })),
-      inspectionReports: inspectionReports.map((item): InspectionReport => ({
-        id: item.id,
-        productId: item.productId,
-        consignorName: asOptionalString(item.consignorName),
-        inspectionDate: toOptionalDateString(item.inspectionDate),
-        conclusion: asOptionalString(item.conclusion),
-        notes: asArray<unknown>(item.notes).map((entry) => asString(entry)),
-        rawHtml: asOptionalString(item.rawHtml),
-        createdAt: toIsoString(item.createdAt, now),
-        updatedAt: toIsoString(item.updatedAt, now),
-      })),
+      inspectionReports: [],
       inspections: inspections.map((item): Inspection => ({
         id: item.id,
         sn: item.sn,
@@ -454,14 +414,6 @@ export class DatabaseService {
         createdAt: toIsoString(item.createdAt, now),
         updatedAt: toIsoString(item.updatedAt, now),
       })),
-      inspectionImages: inspectionImages.map((item): InspectionImage => ({
-        id: item.id,
-        inspectionId: item.inspectionId,
-        assetId: item.assetId,
-        scene: asString(item.scene) as InspectionImage["scene"],
-        sortOrder: item.sortOrder,
-        createdAt: toIsoString(item.createdAt, now),
-      })),
       inspectionEvents: inspectionEvents.map((item): InspectionEvent => ({
         id: item.id,
         inspectionId: item.inspectionId,
@@ -472,58 +424,12 @@ export class DatabaseService {
         sortOrder: item.sortOrder,
         createdAt: toIsoString(item.createdAt, now),
       })),
-      traceCodes: traceCodes.map((item): TraceCode => ({
-        id: item.id,
-        code: item.code,
-        productId: item.productId,
-        verifyStatus: asString(item.verifyStatus) as TraceCode["verifyStatus"],
-        verifyCount: item.verifyCount,
-        firstVerifiedAt: toOptionalIsoString(item.firstVerifiedAt),
-        lastVerifiedAt: toOptionalIsoString(item.lastVerifiedAt),
-        expiresAt: toOptionalIsoString(item.expiresAt),
-        createdAt: toIsoString(item.createdAt, now),
-      })),
-      tracePages: tracePages.map((item): TracePage => {
-        const banners = tracePageBannerMap.get(item.id) ?? [];
-        return {
-          id: item.id,
-          sn: item.sn,
-          indexBannerAssetIdsCsv: banners.map((banner) => banner.assetId).join(","),
-          consignorName: asOptionalString(item.consignorName),
-          inspectionDate: toOptionalDateString(item.inspectionDate),
-          traceContent: asOptionalString(item.traceContent),
-          status: asString(item.status) as TracePage["status"],
-          createdAt: toIsoString(item.createdAt, now),
-          updatedAt: toIsoString(item.updatedAt, now),
-        };
-      }),
-      traceEvents: traceEvents.map((item): TraceEvent => ({
-        id: item.id,
-        traceCodeId: item.traceCodeId,
-        eventTime: toIsoString(item.eventTime, now),
-        eventType: asString(item.eventType) as TraceEvent["eventType"],
-        title: item.title,
-        content: asOptionalString(item.content),
-        sortOrder: item.sortOrder,
-        createdAt: toIsoString(item.createdAt, now),
-      })),
-      traceVerifyLogs: traceVerifyLogs.map((item): TraceVerifyLog => ({
-        id: item.id,
-        traceCodeId: item.traceCodeId,
-        verifyAt: toIsoString(item.verifyAt, now),
-        isValid: item.isValid,
-        clientIp: asOptionalString(item.clientIp),
-        userAgent: asOptionalString(item.userAgent),
-      })),
-      auditLogs: auditLogs.map((item): AuditLog => ({
-        id: item.id,
-        actorUserId: asOptionalString(item.actorUserId),
-        action: item.action,
-        entityType: item.entityType,
-        entityId: asOptionalString(item.entityId),
-        detail: normalizeJsonObject(item.detail),
-        createdAt: toIsoString(item.createdAt, now),
-      })),
+      inspectionImages: [],
+      traceCodes: [],
+      tracePages: [],
+      traceEvents: [],
+      traceVerifyLogs: [],
+      auditLogs: [],
     };
   }
 
