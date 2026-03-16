@@ -46,6 +46,7 @@ function asArray(value: unknown): Array<Record<string, unknown>> {
 }
 
 type UploadSignResponse = {
+  bucket?: string;
   objectKey: string;
   uploadUrl: string;
   method?: string;
@@ -520,6 +521,8 @@ export function MediaPage() {
         body: JSON.stringify({
           name: file.name,
           url: uploadSign.publicUrl,
+          bucket: uploadSign.bucket,
+          objectKey: uploadSign.objectKey,
           mimeType: contentType,
           sizeBytes: file.size,
           width,

@@ -392,6 +392,8 @@ export class DatabaseService {
         sizeBytes: Number(item.sizeBytes),
         width: asOptionalNumber(item.width),
         height: asOptionalNumber(item.height),
+        bucket: asOptionalString(item.bucket),
+        objectKey: asOptionalString(item.objectKey),
         createdAt: toIsoString(item.createdAt, now),
       })),
       companies: companies.map((item): Company => ({
@@ -655,6 +657,8 @@ export class DatabaseService {
             sizeBytes: BigInt(asNumber(item.sizeBytes, 0)),
             width: item.width ?? null,
             height: item.height ?? null,
+            bucket: item.bucket ?? null,
+            objectKey: item.objectKey ?? null,
             createdAt: toDate(item.createdAt),
           },
           update: {
@@ -664,6 +668,8 @@ export class DatabaseService {
             sizeBytes: BigInt(asNumber(item.sizeBytes, 0)),
             width: item.width ?? null,
             height: item.height ?? null,
+            bucket: item.bucket ?? null,
+            objectKey: item.objectKey ?? null,
           },
         });
       }

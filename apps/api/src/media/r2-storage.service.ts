@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { extname } from "node:path";
 import { Injectable } from "@nestjs/common";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 type CreateUploadSignOptions = {
@@ -10,6 +10,7 @@ type CreateUploadSignOptions = {
 };
 
 export type UploadSignResult = {
+  bucket: string;
   objectKey: string;
   uploadUrl: string;
   method: "PUT";
@@ -56,6 +57,14 @@ const encodeObjectKey = (value: string) =>
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
+
+const tryDecodeObjectKey = (value: string) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
 
 const extensionByContentType: Record<string, string> = {
   "image/jpeg": ".jpg",
@@ -158,6 +167,7 @@ export class R2StorageService {
     });
 
     return {
+      bucket: config.bucket,
       objectKey,
       uploadUrl,
       method: "PUT",
@@ -168,5 +178,94 @@ export class R2StorageService {
       expiresIn: config.expiresIn,
     };
   }
-}
 
+  private resolveObjectKeyFromUrl(url: string, config: R2Config, bucket: string): string {
+    const input = normalizeText(url);
+    if (!input) {
+      return "";
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(input);
+    } catch {
+      return "";
+    }
+
+    const host = parsed.host.toLowerCase();
+    const acceptedHosts = new Set<string>();
+    try {
+      acceptedHosts.add(new URL(config.publicBaseUrl).host.toLowerCase());
+    } catch {
+      // ignore malformed public base url
+    }
+    acceptedHosts.add(`${config.bucket}.${config.accountId}.r2.cloudflarestorage.com`.toLowerCase());
+    acceptedHosts.add(`${config.bucket}.r2.dev`.toLowerCase());
+
+    if (!acceptedHosts.has(host)) {
+      return "";
+    }
+
+    const publicBase = normalizeText(config.publicBaseUrl);
+    if (publicBase && input.startsWith(`${publicBase}/`)) {
+      return tryDecodeObjectKey(input.slice(publicBase.length + 1));
+    }
+
+    const path = parsed.pathname.replace(/^\/+/, "");
+    if (!path) {
+      return "";
+    }
+
+    const segments = path.split("/").filter(Boolean);
+    if (segments.length === 0) {
+      return "";
+    }
+
+    // Path-style endpoint: /<bucket>/<object-key>
+    if (segments[0] === bucket && segments.length > 1) {
+      return tryDecodeObjectKey(segments.slice(1).join("/"));
+    }
+
+    return tryDecodeObjectKey(path);
+  }
+
+  async deleteObject(options: { objectKey?: string; url?: string; bucket?: string }) {
+    const keyFromBody = normalizeText(options.objectKey);
+    const rawUrl = normalizeText(options.url);
+    if (!keyFromBody && !rawUrl) {
+      return { attempted: false as const };
+    }
+
+    let config: R2Config;
+    try {
+      config = this.readConfig();
+    } catch (error) {
+      if (keyFromBody) {
+        throw error;
+      }
+
+      return { attempted: false as const };
+    }
+
+    const targetBucket = normalizeText(options.bucket) || config.bucket;
+    const resolvedObjectKey =
+      keyFromBody || this.resolveObjectKeyFromUrl(rawUrl, config, targetBucket);
+
+    if (!resolvedObjectKey) {
+      return { attempted: false as const };
+    }
+
+    await this.getClient(config).send(
+      new DeleteObjectCommand({
+        Bucket: targetBucket,
+        Key: resolvedObjectKey,
+      })
+    );
+
+    return {
+      attempted: true as const,
+      objectKey: resolvedObjectKey,
+      bucket: targetBucket,
+    };
+  }
+}

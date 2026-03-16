@@ -217,6 +217,8 @@ export class AdminController {
       sizeBytes: Number(item.sizeBytes),
       width: item.width ?? undefined,
       height: item.height ?? undefined,
+      bucket: item.bucket ?? undefined,
+      objectKey: item.objectKey ?? undefined,
       createdAt: item.createdAt.toISOString(),
     }));
 
@@ -227,6 +229,8 @@ export class AdminController {
   async createMedia(@Body() body: Record<string, unknown>) {
     const name = String(body?.name ?? "").trim();
     const url = String(body?.url ?? "").trim();
+    const bucket = String(body?.bucket ?? "").trim();
+    const objectKey = String(body?.objectKey ?? "").trim();
 
     if (!name || !url) {
       throw new HttpException({ message: "name and url are required" }, HttpStatus.BAD_REQUEST);
@@ -241,6 +245,8 @@ export class AdminController {
         sizeBytes: toNumber(body?.sizeBytes, 0),
         width: body?.width === undefined ? undefined : toNumber(body.width, 0),
         height: body?.height === undefined ? undefined : toNumber(body.height, 0),
+        bucket: bucket || undefined,
+        objectKey: objectKey || undefined,
         createdAt: this.databaseService.nowIso(),
       };
 
@@ -275,6 +281,16 @@ export class AdminController {
         item.sizeBytes = toNumber(body.sizeBytes, item.sizeBytes);
       }
 
+      if (body?.bucket !== undefined) {
+        const bucket = String(body.bucket ?? "").trim();
+        item.bucket = bucket || undefined;
+      }
+
+      if (body?.objectKey !== undefined) {
+        const objectKey = String(body.objectKey ?? "").trim();
+        item.objectKey = objectKey || undefined;
+      }
+
       return item;
     });
 
@@ -288,6 +304,24 @@ export class AdminController {
   @Delete("media/:id")
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteMedia(@Param("id") id: string) {
+    const db = await this.databaseService.readDb();
+    const media = db.mediaAssets.find((entry) => entry.id === id);
+
+    if (!media) {
+      throw new HttpException({ message: "Media not found" }, HttpStatus.NOT_FOUND);
+    }
+
+    try {
+      await this.r2StorageService.deleteObject({
+        bucket: media.bucket,
+        objectKey: media.objectKey,
+        url: media.url,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete object from R2";
+      throw new HttpException({ message }, HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
     const result = await this.databaseService.mutateDb((db) => {
       const index = db.mediaAssets.findIndex((entry) => entry.id === id);
       if (index < 0) {

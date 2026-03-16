@@ -9,6 +9,8 @@ export interface MediaAsset {
   sizeBytes: number;
   width?: number;
   height?: number;
+  bucket?: string;
+  objectKey?: string;
   createdAt: string;
 }
 
