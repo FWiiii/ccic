@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { HeroImage } from "./components/HeroImage";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { PageFooter } from "./components/PageFooter";
 import { ProductCarousel } from "./components/ProductCarousel";
 import { ProductSummary } from "./components/ProductSummary";
 import { TopTabs, type TabKey } from "./components/TopTabs";
-import { CompanyInfoTab } from "./components/tabs/CompanyInfoTab";
 import { ProductInfoTab } from "./components/tabs/ProductInfoTab";
 import { TraceInfoTab } from "./components/tabs/TraceInfoTab";
 import { useInspectionDisplayModel } from "./hooks/useInspectionDisplayModel";
@@ -17,6 +16,10 @@ import { TraceNotFoundPage } from "./pages/TraceNotFoundPage";
 
 const INSPECTION_AGENCY_FALLBACK =
   "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
+
+const CompanyInfoTab = lazy(() =>
+  import("./components/tabs/CompanyInfoTab").then((module) => ({ default: module.CompanyInfoTab }))
+);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabKey>("taba");
@@ -90,7 +93,11 @@ export default function App() {
                 id="tab2"
                 className={`tab tabb app-tab-panel ${activeTab === "tabb" ? "active is-active" : "is-inactive"}`}
               >
-                <CompanyInfoTab onPreview={setPreviewImage} />
+                {activeTab === "tabb" ? (
+                  <Suspense fallback={<div className="app-query-status">{"\u6b63\u5728\u52a0\u8f7d\u516c\u53f8\u7d20\u6750..."}</div>}>
+                    <CompanyInfoTab onPreview={setPreviewImage} />
+                  </Suspense>
+                ) : null}
               </div>
 
               <div

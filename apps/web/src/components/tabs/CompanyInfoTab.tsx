@@ -26,7 +26,15 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
     <>
       <div className="tab2-div"></div>
       <div className="tab2-div2">
-        <img className="tab2-img" id="logo" src={companyLogo} onClick={() => onPreview(companyLogo)} alt="" />
+        <img
+          className="tab2-img"
+          id="logo"
+          src={companyLogo}
+          onClick={() => onPreview(companyLogo)}
+          loading="lazy"
+          decoding="async"
+          alt=""
+        />
         <span className="companyname tab2-span">中国检验认证集团奢侈品鉴定中心</span>
 
         <div className="hb-box" style={{ display: "none" }}>
@@ -76,6 +84,8 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
                 alt=""
                 style={richImageStyle}
                 onClick={() => onPreview(companyImageA)}
+                loading="lazy"
+                decoding="async"
               />
               <img
                 src={companyImageB}
@@ -83,6 +93,8 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
                 alt=""
                 style={richImageStyle}
                 onClick={() => onPreview(companyImageB)}
+                loading="lazy"
+                decoding="async"
               />
             </span>
           </p>
@@ -97,6 +109,8 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
                 alt=""
                 style={richImageStyle}
                 onClick={() => onPreview(companyImageC)}
+                loading="lazy"
+                decoding="async"
               />
             </span>
           </p>
@@ -107,6 +121,8 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
               alt=""
               style={richImageStyle}
               onClick={() => onPreview(companyImageD)}
+              loading="lazy"
+              decoding="async"
             />
             <img
               src={companyImageE}
@@ -114,6 +130,8 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
               alt=""
               style={richImageStyle}
               onClick={() => onPreview(companyImageE)}
+              loading="lazy"
+              decoding="async"
             />
           </p>
           <p>
