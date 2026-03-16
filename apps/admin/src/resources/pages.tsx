@@ -199,55 +199,31 @@ async function syncInspectionTrack(
   stage: ProgressStage,
   inspectionTime: unknown
 ) {
-  const existing = await listInspectionEvents(inspectionId);
-
-  await Promise.all(
-    existing.map(async (item) => {
-      const id = String(item.id ?? "").trim();
-      if (!id) {
-        return;
-      }
-
-      await adminRequest(`/api/admin/inspection-events/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-    })
-  );
-
   const eventCount = stage === "SUBMITTED" ? 1 : stage === "INSPECTING" ? 2 : 3;
   const eventTimes = buildEventTimes(inspectionTime);
+  const events = [];
 
   for (let index = 0; index < eventCount; index += 1) {
     const config = TRACK_EVENT_CONFIG[index];
-
-    await adminRequest("/api/admin/inspection-events", {
-      method: "POST",
-      body: JSON.stringify({
-        inspectionId,
-        eventType: config.eventType,
-        title: config.title,
-        eventTime: eventTimes[index],
-        sortOrder: index,
-      }),
+    events.push({
+      eventType: config.eventType,
+      title: config.title,
+      eventTime: eventTimes[index],
+      sortOrder: index,
     });
   }
+
+  await adminRequest("/api/admin/inspection-events/replace", {
+    method: "POST",
+    body: JSON.stringify({
+      inspectionId,
+      events,
+    }),
+  });
 }
 
 async function syncProductImages(productId: string, formValues: Record<string, unknown>) {
-  const existingBindings = await listProductImages(productId);
-
-  await Promise.all(
-    existingBindings.map(async (item) => {
-      const id = String(item.id ?? "").trim();
-      if (!id) {
-        return;
-      }
-
-      await adminRequest(`/api/admin/product-images/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-    })
-  );
+  const images = [];
 
   for (const slot of PRODUCT_IMAGE_SLOT_CONFIG) {
     const assetId = toOptionalString(formValues[slot.key]);
@@ -256,16 +232,20 @@ async function syncProductImages(productId: string, formValues: Record<string, u
       continue;
     }
 
-    await adminRequest("/api/admin/product-images", {
-      method: "POST",
-      body: JSON.stringify({
-        productId,
-        assetId,
-        scene: slot.scene,
-        sortOrder: slot.sortOrder,
-      }),
+    images.push({
+      assetId,
+      scene: slot.scene,
+      sortOrder: slot.sortOrder,
     });
   }
+
+  await adminRequest("/api/admin/product-images/replace", {
+    method: "POST",
+    body: JSON.stringify({
+      productId,
+      images,
+    }),
+  });
 }
 
 function useSelectOptions(resource: string, labelField = "name") {

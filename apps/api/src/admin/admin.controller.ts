@@ -807,6 +807,73 @@ export class AdminController {
     return { data, total, page, pageSize };
   }
 
+  @Post("product-images/replace")
+  async replaceProductImages(@Body() body: Record<string, unknown>) {
+    const productId = String(body?.productId ?? "").trim();
+    const imagesRaw = Array.isArray(body?.images) ? body.images : [];
+
+    if (!productId) {
+      throw new HttpException({ message: "productId is required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const images = imagesRaw.map((item, index) => {
+      const payload = (item ?? {}) as Record<string, unknown>;
+      return {
+        assetId: String(payload.assetId ?? "").trim(),
+        scene: String(payload.scene ?? "").trim(),
+        sortOrder: toNumber(payload.sortOrder, index),
+      };
+    });
+
+    if (images.some((item) => !item.assetId || !item.scene || !isProductImageScene(item.scene))) {
+      throw new HttpException({ message: "images payload is invalid" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const dedupedImages = Array.from(
+      new Map(images.map((item) => [`${item.scene}|${item.assetId}|${item.sortOrder}`, item] as const)).values()
+    );
+
+    const result = await this.databaseService.mutateDb((db) => {
+      if (!db.products.some((item) => item.id === productId)) {
+        return { error: "PRODUCT_NOT_FOUND" as const };
+      }
+
+      const missingAsset = dedupedImages.find((item) => !db.mediaAssets.some((asset) => asset.id === item.assetId));
+      if (missingAsset) {
+        return { error: "ASSET_NOT_FOUND" as const };
+      }
+
+      db.productImages = db.productImages.filter((item) => item.productId !== productId);
+
+      const now = this.databaseService.nowIso();
+      for (const item of dedupedImages) {
+        db.productImages.push({
+          id: this.databaseService.newId(),
+          productId,
+          assetId: item.assetId,
+          scene: item.scene as ProductImage["scene"],
+          sortOrder: item.sortOrder,
+          createdAt: now,
+        });
+      }
+
+      const data = db.productImages
+        .filter((item) => item.productId === productId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      return { data };
+    });
+
+    if ("error" in result) {
+      throw new HttpException(
+        { message: result.error === "PRODUCT_NOT_FOUND" ? "productId does not exist" : "assetId does not exist" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
   @Post("product-images")
   async createProductImage(@Body() body: Record<string, unknown>) {
     const productId = String(body?.productId ?? "").trim();
@@ -1505,6 +1572,77 @@ export class AdminController {
     }));
 
     return { data, total, page, pageSize };
+  }
+
+  @Post("inspection-events/replace")
+  async replaceInspectionEvents(@Body() body: Record<string, unknown>) {
+    const inspectionId = String(body?.inspectionId ?? "").trim();
+    const eventsRaw = Array.isArray(body?.events) ? body.events : [];
+
+    if (!inspectionId) {
+      throw new HttpException({ message: "inspectionId is required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const events = eventsRaw.map((item, index) => {
+      const payload = (item ?? {}) as Record<string, unknown>;
+      const title = String(payload.title ?? "").trim();
+      const eventType = payload.eventType;
+      const eventTimeRaw = payload.eventTime;
+      const eventTime = eventTimeRaw === undefined ? this.databaseService.nowIso() : String(eventTimeRaw).trim();
+
+      return {
+        title,
+        eventType,
+        eventTime,
+        content: payload.content ? String(payload.content) : undefined,
+        sortOrder: toNumber(payload.sortOrder, index),
+      };
+    });
+
+    if (
+      events.some(
+        (item) =>
+          !item.title || !item.eventTime || (item.eventType !== undefined && !isInspectionEventType(item.eventType))
+      )
+    ) {
+      throw new HttpException({ message: "events payload is invalid" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const result = await this.databaseService.mutateDb((db) => {
+      if (!db.inspections.some((entry) => entry.id === inspectionId)) {
+        return { error: "INSPECTION_NOT_FOUND" as const };
+      }
+
+      db.inspectionEvents = db.inspectionEvents.filter((entry) => entry.inspectionId !== inspectionId);
+
+      const now = this.databaseService.nowIso();
+      for (const item of events) {
+        db.inspectionEvents.unshift({
+          id: this.databaseService.newId(),
+          inspectionId,
+          eventTime: item.eventTime,
+          eventType: isInspectionEventType(item.eventType) ? item.eventType : "OTHER",
+          title: item.title,
+          content: item.content,
+          sortOrder: item.sortOrder,
+          createdAt: now,
+        });
+      }
+
+      const data = db.inspectionEvents
+        .filter((entry) => entry.inspectionId === inspectionId)
+        .sort((a, b) =>
+          a.eventTime === b.eventTime ? a.sortOrder - b.sortOrder : a.eventTime > b.eventTime ? -1 : 1
+        );
+
+      return { data };
+    });
+
+    if ("error" in result) {
+      throw new HttpException({ message: "inspectionId does not exist" }, HttpStatus.BAD_REQUEST);
+    }
+
+    return result;
   }
 
   @Post("inspection-events")
