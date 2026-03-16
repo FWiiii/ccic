@@ -6,7 +6,7 @@ import {
   type CrudSubmitContext,
   type FieldOption,
 } from "../components/CrudResourcePage";
-import { readAuthToken } from "../providers/data-provider";
+import { requestJson } from "../providers/api-client";
 
 const INSPECTION_AGENCY_NAME =
   "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
@@ -31,56 +31,9 @@ const PRODUCT_IMAGE_SLOT_CONFIG = [
   { key: "productImageAssetId3", scene: "DETAIL", sortOrder: 2 },
 ] as const;
 
-function safeParseJson<T>(text: string): T | null {
-  if (!text.trim()) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return null;
-  }
-}
-
 async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = readAuthToken();
-  const headers = new Headers(init?.headers || {});
-
-  if (init?.body !== undefined && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  if (token && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  const response = await fetch(path, {
-    ...init,
-    headers,
-  });
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  const responseText = await response.text();
-  const payload = safeParseJson<{ data?: T; message?: unknown; error?: unknown }>(responseText);
-
-  if (!response.ok) {
-    const message =
-      (typeof payload?.message === "string" && payload.message) ||
-      (typeof payload?.error === "string" && payload.error) ||
-      `Request failed (${response.status})`;
-
-    throw new Error(message);
-  }
-
-  if (payload?.data !== undefined) {
-    return payload.data;
-  }
-
-  return (payload as unknown as T) ?? (undefined as T);
+  const data = await requestJson<T>(path, init);
+  return data as T;
 }
 
 function toOptionalString(value: unknown) {

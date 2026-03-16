@@ -1,5 +1,25 @@
-export const TOKEN_STORAGE_KEY = "ccic_admin_token";
-export const USER_STORAGE_KEY = "ccic_admin_user";
+import { requestJson } from "./api-client";
+import {
+  clearAuthToken,
+  clearStoredUser,
+  readAuthToken,
+  readStoredUserRaw,
+  TOKEN_STORAGE_KEY,
+  USER_STORAGE_KEY,
+  writeAuthToken,
+  writeStoredUserRaw,
+} from "./auth-storage";
+
+export {
+  clearAuthToken,
+  clearStoredUser,
+  readAuthToken,
+  readStoredUserRaw,
+  TOKEN_STORAGE_KEY,
+  USER_STORAGE_KEY,
+  writeAuthToken,
+  writeStoredUserRaw,
+};
 
 const API_URL = "/api/admin";
 
@@ -9,74 +29,6 @@ type ListPayload = {
   data?: unknown;
   total?: unknown;
 };
-
-const readStorage = (key: string) =>
-  sessionStorage.getItem(key) ?? localStorage.getItem(key);
-
-const writeStorage = (key: string, value: string) => {
-  sessionStorage.setItem(key, value);
-  localStorage.removeItem(key);
-};
-
-const removeStorage = (key: string) => {
-  sessionStorage.removeItem(key);
-  localStorage.removeItem(key);
-};
-
-export const readAuthToken = () => readStorage(TOKEN_STORAGE_KEY) ?? "";
-
-export const writeAuthToken = (token: string) => {
-  writeStorage(TOKEN_STORAGE_KEY, token);
-};
-
-export const clearAuthToken = () => {
-  removeStorage(TOKEN_STORAGE_KEY);
-};
-
-export const readStoredUserRaw = () => readStorage(USER_STORAGE_KEY);
-
-export const writeStoredUserRaw = (raw: string) => {
-  writeStorage(USER_STORAGE_KEY, raw);
-};
-
-export const clearStoredUser = () => {
-  removeStorage(USER_STORAGE_KEY);
-};
-
-function safeParseJson<T>(text: string): T | null {
-  if (!text.trim()) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text) as T;
-  } catch {
-    return null;
-  }
-}
-
-function normalizeErrorMessage(
-  payload: { message?: unknown; error?: unknown } | null,
-  responseText: string,
-  status: number
-) {
-  if (typeof payload?.message === "string" && payload.message.trim()) {
-    return payload.message;
-  }
-
-  if (Array.isArray(payload?.message)) {
-    const joined = payload.message.filter((item) => typeof item === "string").join("; ").trim();
-    if (joined) {
-      return joined;
-    }
-  }
-
-  if (typeof payload?.error === "string" && payload.error.trim()) {
-    return payload.error;
-  }
-
-  return responseText.trim() ? `Request failed (${status})` : "Empty response from API service";
-}
 
 function ensureArray(input: unknown): Row[] {
   return Array.isArray(input) ? (input as Row[]) : [];
@@ -160,51 +112,9 @@ function toQueryParams({
   return search;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T | undefined> {
-  const token = readAuthToken();
-  const headers = new Headers(init?.headers || {});
-
-  if (!headers.has("Content-Type") && init?.body !== undefined) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  if (token && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  const response = await fetch(path, {
-    ...init,
-    headers,
-  });
-
-  if (response.status === 204) {
-    return undefined;
-  }
-
-  const responseText = await response.text();
-  const payload = safeParseJson<{ data?: T; message?: unknown; error?: unknown }>(responseText);
-
-  if (!response.ok) {
-    throw {
-      message: normalizeErrorMessage(payload, responseText, response.status),
-      statusCode: response.status,
-    };
-  }
-
-  if (!payload) {
-    return undefined;
-  }
-
-  if (payload.data !== undefined) {
-    return payload.data;
-  }
-
-  return payload as T;
-}
-
 async function listResource(resource: string, query?: URLSearchParams) {
   const suffix = query && query.size ? `?${query.toString()}` : "";
-  return request<unknown>(`${API_URL}/${resource}${suffix}`, { method: "GET" });
+  return requestJson<unknown>(`${API_URL}/${resource}${suffix}`, { method: "GET" });
 }
 
 export const dataProvider: any = {
@@ -283,7 +193,7 @@ export const dataProvider: any = {
     const resource = String(params.resource ?? "");
     const variables = (params.variables ?? {}) as Record<string, unknown>;
 
-    const data = await request<Record<string, unknown>>(`${API_URL}/${resource}`, {
+    const data = await requestJson<Record<string, unknown>>(`${API_URL}/${resource}`, {
       method: "POST",
       body: JSON.stringify(variables),
     });
@@ -298,7 +208,7 @@ export const dataProvider: any = {
     const id = String(params.id ?? "");
     const variables = (params.variables ?? {}) as Record<string, unknown>;
 
-    const data = await request<Record<string, unknown>>(`${API_URL}/${resource}/${id}`, {
+    const data = await requestJson<Record<string, unknown>>(`${API_URL}/${resource}/${id}`, {
       method: "PUT",
       body: JSON.stringify(variables),
     });
@@ -312,7 +222,7 @@ export const dataProvider: any = {
     const resource = String(params.resource ?? "");
     const id = String(params.id ?? "");
 
-    const data = await request<Record<string, unknown>>(`${API_URL}/${resource}/${id}`, {
+    const data = await requestJson<Record<string, unknown>>(`${API_URL}/${resource}/${id}`, {
       method: "DELETE",
     });
 
@@ -374,7 +284,7 @@ export const dataProvider: any = {
     const url = String(params.url ?? "");
     const path = url.startsWith("http") || url.startsWith("/") ? url : `${API_URL}/${url}`;
 
-    const data = await request<Record<string, unknown>>(`${path}${suffix}`, {
+    const data = await requestJson<Record<string, unknown>>(`${path}${suffix}`, {
       method,
       body: payload !== undefined && method !== "GET" ? JSON.stringify(payload) : undefined,
     });
