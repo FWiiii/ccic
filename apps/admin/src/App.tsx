@@ -30,8 +30,9 @@ const MediaPage = lazy(() =>
 );
 
 const routeFallback = (
-  <div style={{ display: "grid", placeItems: "center", minHeight: "40vh" }}>
+  <div className="app-route-fallback">
     <Spin size="large" />
+    <span>正在加载页面...</span>
   </div>
 );
 
@@ -43,9 +44,11 @@ function RequireAuthLayout() {
   }
 
   return (
-    <ThemedLayoutV2>
-      <Outlet />
-    </ThemedLayoutV2>
+    <div className="admin-shell">
+      <ThemedLayoutV2>
+        <Outlet />
+      </ThemedLayoutV2>
+    </div>
   );
 }
 

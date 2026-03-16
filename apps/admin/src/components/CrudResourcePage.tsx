@@ -1,5 +1,13 @@
 import { useState, type ReactNode } from "react";
 import {
+  CheckCircleOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  StopOutlined,
+} from "@ant-design/icons";
+import {
   useCreate,
   useCustomMutation,
   useDelete,
@@ -8,6 +16,7 @@ import {
 import { useTable } from "@refinedev/antd";
 import {
   Button,
+  Empty,
   Form,
   Input,
   InputNumber,
@@ -239,6 +248,8 @@ export function CrudResourcePage({
     Modal.confirm({
       title: "确认删除",
       content: "该操作不可撤销，是否继续？",
+      okText: "删除",
+      cancelText: "取消",
       okButtonProps: { danger: true },
       onOk: async () => {
         await deleteMutate({
@@ -309,21 +320,26 @@ export function CrudResourcePage({
     key: "actions",
     width: 260,
     render: (_: unknown, record: Record<string, unknown>) => (
-      <Space wrap>
-        <Button size="small" onClick={() => void openEdit(record)}>
+      <Space wrap className="crud-action-space" size={4}>
+        <Button size="small" type="text" icon={<EditOutlined />} onClick={() => void openEdit(record)}>
           {"编辑"}
         </Button>
         {publishResource ? (
           <>
-            <Button size="small" type="primary" onClick={() => void publish(record, "PUBLISHED")}>
+            <Button
+              size="small"
+              type="text"
+              icon={<CheckCircleOutlined />}
+              onClick={() => void publish(record, "PUBLISHED")}
+            >
               {"发布"}
             </Button>
-            <Button size="small" onClick={() => void publish(record, "DRAFT")}>
+            <Button size="small" type="text" icon={<StopOutlined />} onClick={() => void publish(record, "DRAFT")}>
               {"下线"}
             </Button>
           </>
         ) : null}
-        <Button size="small" danger onClick={() => handleDelete(record)}>
+        <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
           {"删除"}
         </Button>
       </Space>
@@ -338,70 +354,110 @@ export function CrudResourcePage({
     deleting ||
     customLoading;
 
+  const pagination =
+    tableProps.pagination && typeof tableProps.pagination === "object"
+      ? {
+          ...tableProps.pagination,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total: number, range: [number, number]) =>
+            `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+        }
+      : tableProps.pagination;
+
+  const totalRecords =
+    tableProps.pagination && typeof tableProps.pagination === "object"
+      ? Number(tableProps.pagination.total ?? 0)
+      : 0;
+
   return (
     <div className="crud-page">
       <div className="crud-header">
-        <h2>{title}</h2>
-        <Space>
+        <div className="crud-header-main">
+          <h2>{title}</h2>
+          <span className="crud-subtitle">共 {totalRecords} 条记录</span>
+        </div>
+        <Space className="crud-header-actions" size={[8, 8]} wrap>
+          <Button icon={<ReloadOutlined />} onClick={() => void tableQueryResult?.refetch()}>
+            {"刷新"}
+          </Button>
           {headerActions}
-          <Button onClick={() => void tableQueryResult?.refetch()}>{"刷新"}</Button>
           {allowCreate ? (
-            <Button type="primary" onClick={openCreate}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
               {"新增"}
             </Button>
           ) : null}
         </Space>
       </div>
 
-      <Table
-        {...tableProps}
-        rowKey="id"
-        columns={columns}
-        loading={Boolean(loading)}
-        scroll={{ x: 1200 }}
-      />
+      <div className="crud-table-card">
+        <Table
+          {...tableProps}
+          rowKey="id"
+          columns={columns}
+          loading={Boolean(loading)}
+          size="middle"
+          pagination={pagination}
+          rowClassName={(_, index) => (index !== undefined && index % 2 === 0 ? "crud-row-even" : "crud-row-odd")}
+          locale={{
+            emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无数据" />,
+          }}
+          scroll={{ x: 1200 }}
+        />
+      </div>
 
       <Modal
+        className="crud-modal"
         open={isModalOpen}
         title={editingRecord ? `编辑${title}` : `新增${title}`}
         onCancel={closeModal}
         onOk={() => form.submit()}
         confirmLoading={Boolean(creating || updating || loadingFormValues)}
+        okText="保存"
+        cancelText="取消"
+        maskClosable={false}
         destroyOnClose
-        width={720}
+        width={860}
       >
-        <Form form={form} layout="vertical" onFinish={(values) => void submitForm(values)}>
-          {fields.filter((field) => !field.hideInForm).map((field) => {
-            const fieldType = field.type ?? "text";
+        <Form form={form} layout="vertical" className="crud-form-grid" onFinish={(values) => void submitForm(values)}>
+          <div className="crud-form-grid-inner">
+            {fields.filter((field) => !field.hideInForm).map((field) => {
+              const fieldType = field.type ?? "text";
+              const isFullWidthField =
+                fieldType === "textarea" ||
+                field.key.toLowerCase().includes("html") ||
+                field.key.toLowerCase().includes("description");
 
-            return (
-              <Form.Item
-                key={field.key}
-                name={field.key}
-                label={field.label}
-                rules={
-                  field.required
-                    ? [{ required: true, message: `请输入${field.label}` }]
-                    : undefined
-                }
-              >
-                {fieldType === "textarea" ? (
-                  <Input.TextArea rows={4} />
-                ) : fieldType === "number" ? (
-                  <InputNumber style={{ width: "100%" }} />
-                ) : fieldType === "select" ? (
-                  <Select
-                    allowClear={!field.required}
-                    options={field.options ?? []}
-                    showSearch
-                    optionFilterProp="label"
-                  />
-                ) : (
-                  <Input />
-                )}
-              </Form.Item>
-            );
-          })}
+              return (
+                <Form.Item
+                  className={isFullWidthField ? "crud-field-full" : "crud-field-half"}
+                  key={field.key}
+                  name={field.key}
+                  label={field.label}
+                  rules={
+                    field.required
+                      ? [{ required: true, message: `请输入${field.label}` }]
+                      : undefined
+                  }
+                >
+                  {fieldType === "textarea" ? (
+                    <Input.TextArea rows={4} />
+                  ) : fieldType === "number" ? (
+                    <InputNumber style={{ width: "100%" }} />
+                  ) : fieldType === "select" ? (
+                    <Select
+                      allowClear={!field.required}
+                      options={field.options ?? []}
+                      showSearch
+                      optionFilterProp="label"
+                    />
+                  ) : (
+                    <Input />
+                  )}
+                </Form.Item>
+              );
+            })}
+          </div>
         </Form>
       </Modal>
     </div>

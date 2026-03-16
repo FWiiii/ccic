@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { UploadOutlined } from "@ant-design/icons";
 import { useInvalidate, useList } from "@refinedev/core";
 import { Button, Upload, message } from "antd";
 import {
@@ -414,7 +415,9 @@ export function MediaPage() {
         return false;
       }}
     >
-      <Button loading={uploading}>上传素材</Button>
+      <Button type="primary" icon={<UploadOutlined />} loading={uploading}>
+        上传素材
+      </Button>
     </Upload>
   );
 
