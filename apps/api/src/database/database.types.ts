@@ -108,8 +108,8 @@ export interface InspectionEvent {
   createdAt: string;
 }
 
-export interface PublicInspectionAggregateImage extends MediaAsset {
-  scene: InspectionImageScene;
+export interface PublicInspectionProductImage extends MediaAsset {
+  scene: ProductImageScene;
   sortOrder: number;
 }
 
@@ -124,12 +124,12 @@ export interface PublicInspectionTraceStep {
 export interface PublicInspectionAggregate {
   inspectionAgencyName: string;
   inspection: Inspection;
-  product: Product;
+  product: Product & {
+    images: PublicInspectionProductImage[];
+  };
   company: Company;
-  images: PublicInspectionAggregateImage[];
   events: InspectionEvent[];
   display: {
-    indexBannerImages: MediaAsset[];
     productName: string;
     consignorName: string;
     verificationDate: string;

@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import bannerImage from "../assets/static/upload/image/20260130/1769762711981592.jpg";
+import { type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeImageUrls } from "../utils/normalizeImageUrls";
 
 interface ProductCarouselProps {
@@ -7,14 +6,16 @@ interface ProductCarouselProps {
   onPreview: (src: string) => void;
 }
 
+const AUTO_PLAY_INTERVAL_MS = 3500;
+const SWIPE_THRESHOLD_PX = 40;
+
 export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
-  const normalizedImages = useMemo(() => {
-    const list = normalizeImageUrls(images);
-    return list.length > 0 ? list : [bannerImage];
-  }, [images]);
+  const normalizedImages = useMemo(() => normalizeImageUrls(images), [images]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const previousImagesRef = useRef<string[] | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchDeltaXRef = useRef(0);
 
   useEffect(() => {
     const previousImages = previousImagesRef.current;
@@ -29,32 +30,91 @@ export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
     }
   }, [normalizedImages]);
 
-  const currentImage = normalizedImages[Math.min(activeIndex, normalizedImages.length - 1)] ?? bannerImage;
+  useEffect(() => {
+    if (normalizedImages.length <= 1) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setActiveIndex((prev) => (prev + 1) % normalizedImages.length);
+    }, AUTO_PLAY_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [normalizedImages.length]);
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    if (normalizedImages.length <= 1) {
+      return;
+    }
+
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+    touchDeltaXRef.current = 0;
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    if (touchStartXRef.current === null) {
+      return;
+    }
+
+    const currentX = event.touches[0]?.clientX;
+    if (typeof currentX === "number") {
+      touchDeltaXRef.current = currentX - touchStartXRef.current;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (normalizedImages.length <= 1) {
+      return;
+    }
+
+    const deltaX = touchDeltaXRef.current;
+    if (deltaX <= -SWIPE_THRESHOLD_PX) {
+      setActiveIndex((prev) => (prev + 1) % normalizedImages.length);
+    } else if (deltaX >= SWIPE_THRESHOLD_PX) {
+      setActiveIndex((prev) => (prev - 1 + normalizedImages.length) % normalizedImages.length);
+    }
+
+    touchStartXRef.current = null;
+    touchDeltaXRef.current = 0;
+  };
 
   return (
     <div className="indexBanner">
       <div id="slide" style={{ overflow: "hidden", textAlign: "center" }}>
-        <div className="swiper mySwiper">
-          <div className="swiper-wrapper">
-            <div className="swiper-slide" style={{ height: "270px" }}>
-              <img
-                src={currentImage}
-                style={{ height: "270px" }}
-                onClick={() => onPreview(currentImage)}
-                alt=""
-              />
-            </div>
+        <div className="swiper mySwiper" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+          <div
+            className="swiper-wrapper"
+            style={{
+              transform: `translate3d(-${activeIndex * 100}%, 0, 0)`,
+              transition: normalizedImages.length > 1 ? "transform 300ms ease" : "none",
+            }}
+          >
+            {normalizedImages.length > 0 ? (
+              normalizedImages.map((item, index) => (
+                <div key={`${item}-${index}`} className="swiper-slide" style={{ height: "270px" }}>
+                  <img src={item} style={{ height: "270px" }} onClick={() => onPreview(item)} alt="" />
+                </div>
+              ))
+            ) : (
+              <div className="swiper-slide" style={{ height: "270px", display: "grid", placeItems: "center" }}>
+                <span style={{ color: "#999", fontSize: "14px" }}>鏆傛棤鍟嗗搧鍥剧墖</span>
+              </div>
+            )}
           </div>
 
-          <div className="swiper-pagination">
-            {normalizedImages.map((item, index) => (
-              <span
-                key={`${item}-${index}`}
-                className={`swiper-pagination-bullet ${index === activeIndex ? "swiper-pagination-bullet-active" : ""}`}
-                onClick={() => setActiveIndex(index)}
-              ></span>
-            ))}
-          </div>
+          {normalizedImages.length > 1 ? (
+            <div className="swiper-pagination">
+              {normalizedImages.map((item, index) => (
+                <span
+                  key={`${item}-${index}`}
+                  className={`swiper-pagination-bullet ${index === activeIndex ? "swiper-pagination-bullet-active" : ""}`}
+                  onClick={() => setActiveIndex(index)}
+                ></span>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

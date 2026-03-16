@@ -187,27 +187,35 @@ export class AdminController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteMedia(@Param("id") id: string) {
     const result = await this.databaseService.mutateDb((db) => {
-      if (
-        db.productImages.some((item) => item.assetId === id) ||
-        db.inspectionImages.some((item) => item.assetId === id) ||
-        db.companies.some((item) => item.logoAssetId === id) ||
-        db.tracePages.some((item) => parseAssetIdsCsv(item.indexBannerAssetIdsCsv).includes(id))
-      ) {
-        return "IN_USE" as const;
-      }
-
       const index = db.mediaAssets.findIndex((entry) => entry.id === id);
       if (index < 0) {
         return "NOT_FOUND" as const;
       }
 
+      const now = this.databaseService.nowIso();
+      db.productImages = db.productImages.filter((item) => item.assetId !== id);
+      db.inspectionImages = db.inspectionImages.filter((item) => item.assetId !== id);
+
+      for (const company of db.companies) {
+        if (company.logoAssetId === id) {
+          company.logoAssetId = undefined;
+          company.updatedAt = now;
+        }
+      }
+
+      for (const tracePage of db.tracePages) {
+        const nextAssetIds = parseAssetIdsCsv(tracePage.indexBannerAssetIdsCsv).filter((assetId) => assetId !== id);
+        const nextCsv = nextAssetIds.join(",");
+
+        if (nextCsv !== tracePage.indexBannerAssetIdsCsv) {
+          tracePage.indexBannerAssetIdsCsv = nextCsv;
+          tracePage.updatedAt = now;
+        }
+      }
+
       db.mediaAssets.splice(index, 1);
       return "OK" as const;
     });
-
-    if (result === "IN_USE") {
-      throw new HttpException({ message: "Media is in use" }, HttpStatus.CONFLICT);
-    }
 
     if (result === "NOT_FOUND") {
       throw new HttpException({ message: "Media not found" }, HttpStatus.NOT_FOUND);

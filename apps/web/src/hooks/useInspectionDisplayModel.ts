@@ -46,24 +46,13 @@ export function useInspectionDisplayModel({
   inspectionData,
   inspectionAgencyFallback,
 }: UseInspectionDisplayModelOptions) {
-  const bannerImages = useMemo(() => {
-    const displayImages = normalizeImageUrls(
-      (inspectionData?.display?.indexBannerImages ?? []).map((item) => item?.url)
-    );
-    const fallbackImages = normalizeImageUrls((inspectionData?.images ?? []).map((item) => item?.url));
+  const productImages = useMemo(
+    () => normalizeImageUrls((inspectionData?.product?.images ?? []).map((item) => item?.url)),
+    [inspectionData]
+  );
 
-    return displayImages.length > 0 ? displayImages : fallbackImages;
-  }, [inspectionData]);
-
-  const traceSampleImages = useMemo(() => {
-    const inspectionImages = normalizeImageUrls((inspectionData?.images ?? []).map((item) => item?.url));
-
-    if (inspectionImages.length > 0) {
-      return inspectionImages;
-    }
-
-    return normalizeImageUrls((inspectionData?.display?.indexBannerImages ?? []).map((item) => item?.url));
-  }, [inspectionData]);
+  const bannerImages = productImages;
+  const traceSampleImages = productImages;
 
   const productName =
     inspectionData?.display?.productName?.trim() || inspectionData?.product?.name?.trim() || "-";

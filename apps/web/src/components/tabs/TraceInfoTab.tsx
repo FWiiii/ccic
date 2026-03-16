@@ -16,12 +16,6 @@ interface TraceInfoTabProps {
   onPreview?: (src: string) => void;
 }
 
-const DEFAULT_SAMPLE_IMAGES = [
-  "https://file.ccicchengdu.com/81028410-b18a-4bb2-a85a-47a363efdcb1.png",
-  "https://file.ccicchengdu.com/e14fd79b-6ebb-4b39-a780-abeda44a3dd7.png",
-  "https://file.ccicchengdu.com/ab2122f1-17af-4903-810c-687fd0e7bda6.png",
-];
-
 const DEFAULT_CONCLUSION = "送检样品符合品牌/制造商的技术信息或工艺特征";
 
 const DECLARATION_TEXT = `一、本鉴定咨询意见是依据申请人提交的鉴定材料及送检样品，经检验鉴定后而得出的结论。如送检样品在鉴定结论给出后的状态发生变化，或奢侈品鉴定防伪扣与包身脱离，本鉴定咨询意见不再适用。
@@ -69,7 +63,7 @@ export function TraceInfoTab({
 
   const normalizedSampleImages = useMemo(() => {
     const list = (sampleImages ?? []).map((item) => String(item ?? "").trim()).filter(Boolean);
-    return list.length > 0 ? list : DEFAULT_SAMPLE_IMAGES;
+    return list;
   }, [sampleImages]);
 
   const sectionStates = SECTION_STATE_BY_TRACE_STATUS[currentStatus] ?? SECTION_STATE_BY_TRACE_STATUS.SUBMITTED;
@@ -122,15 +116,19 @@ export function TraceInfoTab({
                             <div className="app-trace-record-body">
                               {section.key === "sample" ? (
                                 <div className="app-trace-body-center">
-                                  {normalizedSampleImages.map((imageUrl, imageIndex) => (
-                                    <img
-                                      key={`${imageUrl}-${imageIndex}`}
-                                      src={imageUrl}
-                                      className="app-trace-sample-image"
-                                      alt=""
-                                      onClick={() => onPreview?.(imageUrl)}
-                                    />
-                                  ))}
+                                  {normalizedSampleImages.length > 0 ? (
+                                    normalizedSampleImages.map((imageUrl, imageIndex) => (
+                                      <img
+                                        key={`${imageUrl}-${imageIndex}`}
+                                        src={imageUrl}
+                                        className="app-trace-sample-image"
+                                        alt=""
+                                        onClick={() => onPreview?.(imageUrl)}
+                                      />
+                                    ))
+                                  ) : (
+                                    <span style={{ color: "#999", fontSize: "14px" }}>暂无样品图</span>
+                                  )}
                                 </div>
                               ) : null}
 

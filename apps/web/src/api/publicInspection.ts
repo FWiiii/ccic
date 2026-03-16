@@ -21,14 +21,13 @@ export interface PublicInspectionData {
   product: {
     id: string;
     name: string;
+    images: PublicInspectionImage[];
   };
   company: {
     id: string;
     name: string;
   };
-  images: PublicInspectionImage[];
   display?: {
-    indexBannerImages?: PublicInspectionImage[];
     productName?: string;
     consignorName?: string;
     verificationDate?: string;
@@ -82,4 +81,3 @@ export async function fetchInspectionBySn(sn: string, signal?: AbortSignal): Pro
 
   return payload.data;
 }
-

@@ -605,6 +605,13 @@ export class DatabaseService {
       }
 
       if (mediaAssetDiff.toDeleteIds.length > 0) {
+        // Safety net: trace page banner rows may still reference media assets
+        // when historical banner row ids are not aligned with generated diff ids.
+        await tx.tracePageBanner.deleteMany({
+          where: {
+            assetId: { in: mediaAssetDiff.toDeleteIds },
+          },
+        });
         await tx.mediaAsset.deleteMany({ where: { id: { in: mediaAssetDiff.toDeleteIds } } });
       }
 

@@ -1,11 +1,5 @@
 import { Controller, Get, HttpException, HttpStatus, Param, Query } from "@nestjs/common";
-import type {
-  MediaAsset,
-  ProductImage,
-  PublicInspectionAggregate,
-  PublicInspectionTraceStatus,
-  TracePageAggregate,
-} from "../database/database.types";
+import type { MediaAsset, ProductImage, PublicInspectionAggregate, PublicInspectionTraceStatus, TracePageAggregate } from "../database/database.types";
 import { DatabaseService } from "../database/database.service";
 
 const parseAssetIdsCsv = (value: unknown) =>
@@ -110,8 +104,8 @@ export class PublicController {
 
     const assetById = new Map(db.mediaAssets.map((asset) => [asset.id, asset]));
 
-    const images: PublicInspectionAggregate["images"] = db.inspectionImages
-      .filter((item) => item.inspectionId === inspection.id)
+    const productImages: PublicInspectionAggregate["product"]["images"] = db.productImages
+      .filter((item) => item.productId === product.id)
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((item) => {
         const asset = assetById.get(item.assetId);
@@ -125,7 +119,7 @@ export class PublicController {
           sortOrder: item.sortOrder,
         };
       })
-      .filter((item): item is PublicInspectionAggregate["images"][number] => Boolean(item));
+      .filter((item): item is PublicInspectionAggregate["product"]["images"][number] => Boolean(item));
 
     const events = db.inspectionEvents
       .filter((item) => item.inspectionId === inspection.id)
@@ -133,15 +127,7 @@ export class PublicController {
         a.eventTime === b.eventTime ? a.sortOrder - b.sortOrder : a.eventTime > b.eventTime ? -1 : 1
       );
 
-    const fallbackIndexBannerImages = db.productImages
-      .filter((item) => item.productId === product.id)
-      .filter((item) => ["HERO", "CAROUSEL", "DETAIL"].includes(item.scene))
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((item) => assetById.get(item.assetId))
-      .filter((item): item is MediaAsset => Boolean(item));
-
     const currentStatus = resolveTraceStatus(inspection.status, events);
-    const indexBannerImages = images.length > 0 ? images : fallbackIndexBannerImages;
 
     const data: PublicInspectionAggregate = {
       inspectionAgencyName: INSPECTION_AGENCY_NAME,
@@ -149,15 +135,14 @@ export class PublicController {
       product: {
         ...product,
         name: product.name,
+        images: productImages,
       },
       company: {
         ...company,
         name: company.name,
       },
-      images,
       events,
       display: {
-        indexBannerImages,
         productName: product.name,
         consignorName: company.name,
         verificationDate: formatVerificationDate(inspection.inspectionTime),
