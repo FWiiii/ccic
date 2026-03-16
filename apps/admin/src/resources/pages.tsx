@@ -6,7 +6,7 @@ import {
   type CrudSubmitContext,
   type FieldOption,
 } from "../components/CrudResourcePage";
-import { TOKEN_STORAGE_KEY } from "../providers/data-provider";
+import { readAuthToken } from "../providers/data-provider";
 
 const INSPECTION_AGENCY_NAME =
   "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
@@ -44,7 +44,7 @@ function safeParseJson<T>(text: string): T | null {
 }
 
 async function adminRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+  const token = readAuthToken();
   const headers = new Headers(init?.headers || {});
 
   if (init?.body !== undefined && !headers.has("Content-Type")) {

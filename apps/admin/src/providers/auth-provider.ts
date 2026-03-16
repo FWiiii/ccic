@@ -1,5 +1,12 @@
 import type { AuthBindings } from "@refinedev/core";
-import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY } from "./data-provider";
+import {
+  clearAuthToken,
+  clearStoredUser,
+  readAuthToken,
+  readStoredUserRaw,
+  writeAuthToken,
+  writeStoredUserRaw,
+} from "./data-provider";
 
 function safeParseJson<T>(text: string): T | null {
   if (!text.trim()) {
@@ -14,7 +21,7 @@ function safeParseJson<T>(text: string): T | null {
 }
 
 function readStoredUser() {
-  const raw = localStorage.getItem(USER_STORAGE_KEY);
+  const raw = readStoredUserRaw();
   if (!raw) {
     return null;
   }
@@ -57,9 +64,9 @@ export const authProvider: AuthBindings = {
       };
     }
 
-    localStorage.setItem(TOKEN_STORAGE_KEY, payload.data.token);
+    writeAuthToken(payload.data.token);
     if (payload.data.user) {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(payload.data.user));
+      writeStoredUserRaw(JSON.stringify(payload.data.user));
     }
 
     return {
@@ -69,8 +76,8 @@ export const authProvider: AuthBindings = {
   },
 
   logout: async () => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-    localStorage.removeItem(USER_STORAGE_KEY);
+    clearAuthToken();
+    clearStoredUser();
 
     return {
       success: true,
@@ -79,7 +86,7 @@ export const authProvider: AuthBindings = {
   },
 
   check: async () => {
-    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+    const token = readAuthToken();
 
     if (token) {
       return {
@@ -121,8 +128,8 @@ export const authProvider: AuthBindings = {
     const statusCode = Number((error as { statusCode?: number; status?: number })?.statusCode ?? (error as { status?: number })?.status ?? 0);
 
     if (statusCode === 401 || statusCode === 403) {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
+      clearAuthToken();
+      clearStoredUser();
 
       return {
         logout: true,

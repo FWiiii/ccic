@@ -16,10 +16,10 @@ import {
   ProductsPage,
 } from "./resources/pages";
 import { authProvider } from "./providers/auth-provider";
-import { dataProvider, TOKEN_STORAGE_KEY } from "./providers/data-provider";
+import { dataProvider, readAuthToken } from "./providers/data-provider";
 
 function RequireAuthLayout() {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = readAuthToken();
 
   if (!token) {
     return <Navigate to="/login" replace />;
@@ -33,7 +33,7 @@ function RequireAuthLayout() {
 }
 
 function LoginRoute() {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+  const token = readAuthToken();
 
   if (token) {
     return <Navigate to="/inspections" replace />;

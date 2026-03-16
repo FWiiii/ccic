@@ -19,14 +19,13 @@ export function LoginPage() {
           CCIC 管理后台
         </Typography.Title>
         <Typography.Paragraph type="secondary" style={{ marginBottom: 20 }}>
-          使用管理员账号登录，默认：admin / admin123
+          使用管理员账号登录
         </Typography.Paragraph>
 
         {error ? <Alert type="error" message={error} showIcon style={{ marginBottom: 16 }} /> : null}
 
         <Form<LoginFormValues>
           layout="vertical"
-          initialValues={{ username: "admin", password: "admin123" }}
           onFinish={async (values) => {
             setError(null);
             const result = await login(values);
@@ -41,7 +40,7 @@ export function LoginPage() {
             label="用户名"
             rules={[{ required: true, message: "请输入用户名" }]}
           >
-            <Input prefix={<UserOutlined />} placeholder="admin" autoComplete="username" />
+            <Input prefix={<UserOutlined />} placeholder="请输入用户名" autoComplete="username" />
           </Form.Item>
 
           <Form.Item

@@ -10,6 +10,39 @@ type ListPayload = {
   total?: unknown;
 };
 
+const readStorage = (key: string) =>
+  sessionStorage.getItem(key) ?? localStorage.getItem(key);
+
+const writeStorage = (key: string, value: string) => {
+  sessionStorage.setItem(key, value);
+  localStorage.removeItem(key);
+};
+
+const removeStorage = (key: string) => {
+  sessionStorage.removeItem(key);
+  localStorage.removeItem(key);
+};
+
+export const readAuthToken = () => readStorage(TOKEN_STORAGE_KEY) ?? "";
+
+export const writeAuthToken = (token: string) => {
+  writeStorage(TOKEN_STORAGE_KEY, token);
+};
+
+export const clearAuthToken = () => {
+  removeStorage(TOKEN_STORAGE_KEY);
+};
+
+export const readStoredUserRaw = () => readStorage(USER_STORAGE_KEY);
+
+export const writeStoredUserRaw = (raw: string) => {
+  writeStorage(USER_STORAGE_KEY, raw);
+};
+
+export const clearStoredUser = () => {
+  removeStorage(USER_STORAGE_KEY);
+};
+
 function safeParseJson<T>(text: string): T | null {
   if (!text.trim()) {
     return null;
@@ -128,7 +161,7 @@ function toQueryParams({
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T | undefined> {
-  const token = localStorage.getItem(TOKEN_STORAGE_KEY) || "";
+  const token = readAuthToken();
   const headers = new Headers(init?.headers || {});
 
   if (!headers.has("Content-Type") && init?.body !== undefined) {
@@ -351,4 +384,3 @@ export const dataProvider: any = {
     };
   },
 };
-
