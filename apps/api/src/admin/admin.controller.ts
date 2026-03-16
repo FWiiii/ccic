@@ -10,12 +10,16 @@ import {
   Post,
   Put,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
+import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
+import type { Request } from "express";
 import { AdminAuthGuard } from "../auth/admin-auth.guard";
 import { DatabaseService } from "../database/database.service";
 import type {
+  AdminUser,
   Company,
   Inspection,
   InspectionEvent,
@@ -122,6 +126,21 @@ const resolveListSortField = <T extends string>(
   return (allowed as readonly string[]).includes(sortBy) ? (sortBy as T) : fallback;
 };
 
+const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+const isAdminUserRole = (value: unknown): value is AdminUser["role"] =>
+  ["SUPER_ADMIN", "EDITOR", "VIEWER"].includes(String(value));
+const isAdminUserStatus = (value: unknown): value is AdminUser["status"] =>
+  ["ACTIVE", "DISABLED"].includes(String(value));
+
+const getPasswordHashRounds = () => {
+  const raw = Number(process.env.ADMIN_PASSWORD_BCRYPT_COST ?? 12);
+  if (!Number.isFinite(raw)) {
+    return 12;
+  }
+
+  return Math.min(14, Math.max(10, Math.floor(raw)));
+};
+
 const isLegacyTraceApiEnabled = () => String(process.env.ENABLE_LEGACY_TRACE_APIS ?? "").toLowerCase() === "true";
 
 @UseGuards(AdminAuthGuard)
@@ -166,6 +185,187 @@ export class AdminController {
         traceEvents: db.traceEvents,
       },
     };
+  }
+
+  @Get("users")
+  async listUsers(
+    @Query("id") queryId?: string,
+    @Query("ids") queryIds?: string,
+    @Query("username") queryUsername?: string,
+    @Query("role") queryRole?: string,
+    @Query("status") queryStatus?: string,
+    @Query("page") queryPage?: string,
+    @Query("pageSize") queryPageSize?: string,
+    @Query("sortBy") querySortBy?: string,
+    @Query("sortOrder") querySortOrder?: string
+  ) {
+    const { page, pageSize, skip, take } = parseListPagination(queryPage, queryPageSize);
+    const sortBy = resolveListSortField(
+      querySortBy,
+      ["createdAt", "updatedAt", "username", "displayName", "role", "status", "lastLoginAt"] as const,
+      "createdAt"
+    );
+    const sortOrder = parseListSortOrder(querySortOrder);
+
+    const id = String(queryId ?? "").trim();
+    const ids = parseAssetIdsCsv(queryIds);
+    const username = String(queryUsername ?? "").trim();
+    const role = String(queryRole ?? "").trim();
+    const status = String(queryStatus ?? "").trim();
+
+    if (role && !isAdminUserRole(role)) {
+      throw new HttpException({ message: "role must be SUPER_ADMIN/EDITOR/VIEWER" }, HttpStatus.BAD_REQUEST);
+    }
+
+    if (status && !isAdminUserStatus(status)) {
+      throw new HttpException({ message: "status must be ACTIVE/DISABLED" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const where: Prisma.AdminUserWhereInput = {};
+    if (id) {
+      where.id = id;
+    } else if (ids.length > 0) {
+      where.id = { in: ids };
+    }
+
+    if (username) {
+      where.username = { contains: username, mode: "insensitive" };
+    }
+
+    if (role) {
+      where.role = role;
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    const [total, rows] = await Promise.all([
+      this.prisma.adminUser.count({ where }),
+      this.prisma.adminUser.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        skip,
+        take,
+      }),
+    ]);
+
+    const data = rows.map((item) => ({
+      id: item.id,
+      username: item.username,
+      displayName: item.displayName,
+      role: item.role,
+      status: item.status,
+      lastLoginAt: item.lastLoginAt?.toISOString(),
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+    }));
+
+    return { data, total, page, pageSize };
+  }
+
+  @Post("users")
+  async createUser(@Body() body: Record<string, unknown>) {
+    const username = String(body?.username ?? "").trim();
+    const password = String(body?.password ?? "").trim();
+    const displayNameRaw = String(body?.displayName ?? "").trim();
+    const roleRaw = String(body?.role ?? "").trim();
+    const statusRaw = String(body?.status ?? "").trim();
+
+    if (!username || !password) {
+      throw new HttpException({ message: "username and password are required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    if (roleRaw && !isAdminUserRole(roleRaw)) {
+      throw new HttpException({ message: "role must be SUPER_ADMIN/EDITOR/VIEWER" }, HttpStatus.BAD_REQUEST);
+    }
+
+    if (statusRaw && !isAdminUserStatus(statusRaw)) {
+      throw new HttpException({ message: "status must be ACTIVE/DISABLED" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const existed = await this.prisma.adminUser.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+    if (existed) {
+      throw new HttpException({ message: "username already exists" }, HttpStatus.CONFLICT);
+    }
+
+    const passwordHash = BCRYPT_HASH_PATTERN.test(password)
+      ? password
+      : await bcrypt.hash(password, getPasswordHashRounds());
+
+    const now = new Date();
+    const created = await this.prisma.adminUser.create({
+      data: {
+        id: this.databaseService.newId(),
+        username,
+        password: passwordHash,
+        displayName: displayNameRaw || username,
+        role: isAdminUserRole(roleRaw) ? roleRaw : "EDITOR",
+        status: isAdminUserStatus(statusRaw) ? statusRaw : "ACTIVE",
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    const data = {
+      id: created.id,
+      username: created.username,
+      displayName: created.displayName,
+      role: created.role,
+      status: created.status,
+      lastLoginAt: created.lastLoginAt?.toISOString(),
+      createdAt: created.createdAt.toISOString(),
+      updatedAt: created.updatedAt.toISOString(),
+    };
+
+    return { data };
+  }
+
+  @Delete("users/:id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteUser(@Param("id") id: string, @Req() request: Request & { adminUserId?: string }) {
+    const userId = String(id ?? "").trim();
+    if (!userId) {
+      throw new HttpException({ message: "id is required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const currentUserId = String(request.adminUserId ?? "").trim();
+    if (currentUserId && currentUserId === userId) {
+      throw new HttpException({ message: "cannot delete current user" }, HttpStatus.BAD_REQUEST);
+    }
+
+    const target = await this.prisma.adminUser.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+    if (!target) {
+      throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);
+    }
+
+    if (target.role === "SUPER_ADMIN") {
+      const superAdminCount = await this.prisma.adminUser.count({
+        where: { role: "SUPER_ADMIN" },
+      });
+
+      if (superAdminCount <= 1) {
+        throw new HttpException({ message: "cannot delete the last SUPER_ADMIN" }, HttpStatus.CONFLICT);
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.adminSession.deleteMany({
+        where: { userId },
+      });
+
+      await tx.adminUser.delete({
+        where: { id: userId },
+      });
+    });
   }
 
   @Post("media/upload-sign")

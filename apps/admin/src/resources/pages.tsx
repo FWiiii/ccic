@@ -439,3 +439,45 @@ export function MediaPage() {
     />
   );
 }
+
+export function UsersPage() {
+  return (
+    <CrudResourcePage
+      title={"用户管理"}
+      resource="users"
+      allowEdit={false}
+      createInitialValues={{
+        role: "EDITOR",
+        status: "ACTIVE",
+      }}
+      fields={[
+        { key: "username", label: "用户名", required: true },
+        { key: "displayName", label: "显示名称", required: true },
+        { key: "password", label: "登录密码", required: true, hideInTable: true },
+        {
+          key: "role",
+          label: "角色",
+          type: "select",
+          required: true,
+          options: [
+            { label: "SUPER_ADMIN", value: "SUPER_ADMIN" },
+            { label: "EDITOR", value: "EDITOR" },
+            { label: "VIEWER", value: "VIEWER" },
+          ],
+        },
+        {
+          key: "status",
+          label: "状态",
+          type: "select",
+          required: true,
+          options: [
+            { label: "ACTIVE", value: "ACTIVE" },
+            { label: "DISABLED", value: "DISABLED" },
+          ],
+        },
+        { key: "createdAt", label: "创建时间", hideInForm: true },
+        { key: "updatedAt", label: "更新时间", hideInForm: true },
+      ]}
+    />
+  );
+}

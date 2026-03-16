@@ -68,6 +68,7 @@ export interface CrudResourcePageProps {
   fields: CrudFieldConfig[];
   headerActions?: ReactNode;
   allowCreate?: boolean;
+  allowEdit?: boolean;
   publishResource?: "products" | "companies";
   permanentFilters?: CrudFilter[];
   submitOverrides?: Record<string, unknown>;
@@ -133,6 +134,7 @@ export function CrudResourcePage({
   fields,
   headerActions,
   allowCreate = true,
+  allowEdit = true,
   publishResource,
   permanentFilters,
   submitOverrides,
@@ -393,9 +395,11 @@ export function CrudResourcePage({
     width: 260,
     render: (_: unknown, record: Record<string, unknown>) => (
       <Space wrap className="crud-action-space" size={4}>
-        <Button size="small" type="text" icon={<EditOutlined />} onClick={() => void openEdit(record)}>
-          {"编辑"}
-        </Button>
+        {allowEdit ? (
+          <Button size="small" type="text" icon={<EditOutlined />} onClick={() => void openEdit(record)}>
+            {"编辑"}
+          </Button>
+        ) : null}
         {publishResource ? (
           <>
             <Button

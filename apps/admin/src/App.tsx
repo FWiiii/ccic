@@ -3,6 +3,7 @@ import {
   FileSearchOutlined,
   PictureOutlined,
   ShopOutlined,
+  UserOutlined,
 } from "@ant-design/icons";
 import { Suspense, lazy } from "react";
 import { Refine } from "@refinedev/core";
@@ -27,6 +28,9 @@ const CompaniesPage = lazy(() =>
 );
 const MediaPage = lazy(() =>
   import("./resources/pages").then((module) => ({ default: module.MediaPage }))
+);
+const UsersPage = lazy(() =>
+  import("./resources/pages").then((module) => ({ default: module.UsersPage }))
 );
 
 const routeFallback = (
@@ -95,6 +99,14 @@ export default function App() {
           },
         },
         {
+          name: "users",
+          list: "/users",
+          meta: {
+            label: "用户管理",
+            icon: <UserOutlined />,
+          },
+        },
+        {
           name: "media",
           list: "/media",
           meta: {
@@ -115,6 +127,7 @@ export default function App() {
             <Route path="/inspections" element={<InspectionsPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/companies" element={<CompaniesPage />} />
+            <Route path="/users" element={<UsersPage />} />
             <Route path="/media" element={<MediaPage />} />
           </Route>
 
