@@ -84,11 +84,47 @@ function renderCellValue(value: unknown) {
     return "-";
   }
 
+  if (typeof value === "string") {
+    const isoDateTimePattern =
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+
+    if (isoDateTimePattern.test(value)) {
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        const year = parsed.getFullYear();
+        const month = parsed.getMonth() + 1;
+        const day = parsed.getDate();
+        const hour = String(parsed.getHours()).padStart(2, "0");
+        const minute = String(parsed.getMinutes()).padStart(2, "0");
+        const second = String(parsed.getSeconds()).padStart(2, "0");
+        return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+      }
+    }
+  }
+
   if (typeof value === "boolean") {
     return value ? "true" : "false";
   }
 
   return String(value);
+}
+
+function formatBytes(value: unknown) {
+  const bytes = Number(value ?? 0);
+
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "-";
+  }
+
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function CrudResourcePage({
@@ -278,8 +314,12 @@ export function CrudResourcePage({
     await tableQueryResult?.refetch();
   };
 
-  const columns: TableColumnsType<Record<string, unknown>> = fields
-    .filter((field) => !field.hideInTable)
+  let columns: TableColumnsType<Record<string, unknown>> = fields
+    .filter(
+      (field) =>
+        !field.hideInTable &&
+        !(resource === "media" && ["mimeType", "sizeBytes", "width", "height"].includes(field.key))
+    )
     .map((field) => ({
       title: field.label,
       dataIndex: field.key,
@@ -314,6 +354,38 @@ export function CrudResourcePage({
         return renderCellValue(value);
       },
     }));
+
+  if (resource === "media") {
+    const mediaInfoColumn = {
+      title: "图片信息",
+      key: "assetInfo",
+      dataIndex: "assetInfo",
+      render: (_value: unknown, record: Record<string, unknown>) => {
+        const width = Number(record.width ?? 0);
+        const height = Number(record.height ?? 0);
+        const hasResolution =
+          Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0;
+        const sizeText = formatBytes(record.sizeBytes);
+
+        if (hasResolution && sizeText !== "-") {
+          return `${width} x ${height} | ${sizeText}`;
+        }
+
+        if (hasResolution) {
+          return `${width} x ${height}`;
+        }
+
+        return sizeText;
+      },
+    };
+
+    const urlColumnIndex = columns.findIndex((column) => String(column.key ?? "") === "url");
+    if (urlColumnIndex >= 0) {
+      columns.splice(urlColumnIndex + 1, 0, mediaInfoColumn);
+    } else {
+      columns.unshift(mediaInfoColumn);
+    }
+  }
 
   columns.push({
     title: "操作",
