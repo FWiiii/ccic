@@ -164,6 +164,8 @@ export class AdminController {
 
   @Get("media")
   async listMedia(
+    @Query("id") queryId?: string,
+    @Query("ids") queryIds?: string,
     @Query("name") queryName?: string,
     @Query("mimeType") queryMimeType?: string,
     @Query("page") queryPage?: string,
@@ -175,10 +177,18 @@ export class AdminController {
     const sortBy = resolveListSortField(querySortBy, ["createdAt", "name", "mimeType", "sizeBytes"] as const, "createdAt");
     const sortOrder = parseListSortOrder(querySortOrder);
 
+    const id = String(queryId ?? "").trim();
+    const ids = parseAssetIdsCsv(queryIds);
     const name = String(queryName ?? "").trim();
     const mimeType = String(queryMimeType ?? "").trim();
 
     const where: Prisma.MediaAssetWhereInput = {};
+    if (id) {
+      where.id = id;
+    } else if (ids.length > 0) {
+      where.id = { in: ids };
+    }
+
     if (name) {
       where.name = { contains: name, mode: "insensitive" };
     }
@@ -316,6 +326,8 @@ export class AdminController {
 
   @Get("companies")
   async listCompanies(
+    @Query("id") queryId?: string,
+    @Query("ids") queryIds?: string,
     @Query("name") queryName?: string,
     @Query("status") queryStatus?: string,
     @Query("page") queryPage?: string,
@@ -327,6 +339,8 @@ export class AdminController {
     const sortBy = resolveListSortField(querySortBy, ["createdAt", "updatedAt", "name", "status"] as const, "updatedAt");
     const sortOrder = parseListSortOrder(querySortOrder);
 
+    const id = String(queryId ?? "").trim();
+    const ids = parseAssetIdsCsv(queryIds);
     const name = String(queryName ?? "").trim();
     const status = String(queryStatus ?? "").trim();
     if (status && !isPublishStatus(status)) {
@@ -334,6 +348,12 @@ export class AdminController {
     }
 
     const where: Prisma.CompanyWhereInput = {};
+    if (id) {
+      where.id = id;
+    } else if (ids.length > 0) {
+      where.id = { in: ids };
+    }
+
     if (name) {
       where.name = { contains: name, mode: "insensitive" };
     }
@@ -502,6 +522,8 @@ export class AdminController {
 
   @Get("products")
   async listProducts(
+    @Query("id") queryId?: string,
+    @Query("ids") queryIds?: string,
     @Query("name") queryName?: string,
     @Query("companyId") queryCompanyId?: string,
     @Query("status") queryStatus?: string,
@@ -518,6 +540,8 @@ export class AdminController {
     );
     const sortOrder = parseListSortOrder(querySortOrder);
 
+    const id = String(queryId ?? "").trim();
+    const ids = parseAssetIdsCsv(queryIds);
     const name = String(queryName ?? "").trim();
     const companyId = String(queryCompanyId ?? "").trim();
     const status = String(queryStatus ?? "").trim();
@@ -526,6 +550,12 @@ export class AdminController {
     }
 
     const where: Prisma.ProductWhereInput = {};
+    if (id) {
+      where.id = id;
+    } else if (ids.length > 0) {
+      where.id = { in: ids };
+    }
+
     if (name) {
       where.name = { contains: name, mode: "insensitive" };
     }
@@ -883,6 +913,8 @@ export class AdminController {
 
   @Get("inspections")
   async listInspections(
+    @Query("id") queryId?: string,
+    @Query("ids") queryIds?: string,
     @Query("sn") querySn?: string,
     @Query("productId") queryProductId?: string,
     @Query("companyId") queryCompanyId?: string,
@@ -896,6 +928,8 @@ export class AdminController {
     const productId = String(queryProductId ?? "").trim();
     const companyId = String(queryCompanyId ?? "").trim();
     const status = String(queryStatus ?? "").trim();
+    const id = String(queryId ?? "").trim();
+    const ids = parseAssetIdsCsv(queryIds);
 
     if (status && !isInspectionStatus(status)) {
       throw new HttpException(
@@ -913,6 +947,12 @@ export class AdminController {
     const sortOrder = parseListSortOrder(querySortOrder);
 
     const where: Prisma.InspectionWhereInput = {};
+    if (id) {
+      where.id = id;
+    } else if (ids.length > 0) {
+      where.id = { in: ids };
+    }
+
     if (sn) {
       where.sn = sn;
     }

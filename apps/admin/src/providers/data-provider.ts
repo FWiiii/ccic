@@ -1,9 +1,14 @@
-
-
 export const TOKEN_STORAGE_KEY = "ccic_admin_token";
 export const USER_STORAGE_KEY = "ccic_admin_user";
 
 const API_URL = "/api/admin";
+
+type Row = Record<string, unknown>;
+
+type ListPayload = {
+  data?: unknown;
+  total?: unknown;
+};
 
 function safeParseJson<T>(text: string): T | null {
   if (!text.trim()) {
@@ -40,98 +45,86 @@ function normalizeErrorMessage(
   return responseText.trim() ? `Request failed (${status})` : "Empty response from API service";
 }
 
-function toQueryParams(filters: Array<Record<string, unknown>> = []) {
+function ensureArray(input: unknown): Row[] {
+  return Array.isArray(input) ? (input as Row[]) : [];
+}
+
+function normalizeTotal(input: unknown, fallback: number) {
+  const total = Number(input);
+  if (!Number.isFinite(total)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.floor(total));
+}
+
+function parseListResult(input: unknown) {
+  if (Array.isArray(input)) {
+    const rows = ensureArray(input);
+    return {
+      data: rows,
+      total: rows.length,
+    };
+  }
+
+  const payload = (input ?? {}) as ListPayload;
+  const rows = ensureArray(payload.data);
+  return {
+    data: rows,
+    total: normalizeTotal(payload.total, rows.length),
+  };
+}
+
+function toQueryParams({
+  filters,
+  sorters,
+  pagination,
+}: {
+  filters?: Array<Record<string, unknown>>;
+  sorters?: Array<Record<string, unknown>>;
+  pagination?: Record<string, unknown>;
+}) {
   const search = new URLSearchParams();
 
-  for (const filter of filters) {
+  for (const filter of filters ?? []) {
     const field = String(filter?.field ?? "").trim();
     const operator = String(filter?.operator ?? "eq").trim();
-    const value = filter?.value;
+    const rawValue = filter?.value;
 
-    if (!field || value === undefined || value === null || value === "") {
+    if (!field || rawValue === undefined || rawValue === null || rawValue === "") {
       continue;
     }
 
-    if (operator === "eq") {
-      search.set(field, String(value));
+    if (operator === "eq" || operator === "contains") {
+      search.set(field, String(rawValue));
+      continue;
     }
+
+    if (operator === "in" && Array.isArray(rawValue)) {
+      const values = rawValue.map((item) => String(item ?? "").trim()).filter(Boolean);
+      if (values.length > 0) {
+        search.set(field, values.join(","));
+      }
+    }
+  }
+
+  const firstSorter = (sorters ?? []).find((item) => String(item?.field ?? "").trim());
+  if (firstSorter) {
+    const sortBy = String(firstSorter.field ?? "").trim();
+    const sortOrder = String(firstSorter.order ?? "asc").toLowerCase() === "asc" ? "asc" : "desc";
+    search.set("sortBy", sortBy);
+    search.set("sortOrder", sortOrder);
+  }
+
+  const mode = String(pagination?.mode ?? "server");
+  if (mode !== "off") {
+    const current = Math.max(1, Number(pagination?.current ?? 1));
+    const pageSize = Math.max(1, Number(pagination?.pageSize ?? 10));
+    search.set("page", String(current));
+    search.set("pageSize", String(pageSize));
   }
 
   return search;
-}
-
-function applyFilters(rows: Array<Record<string, unknown>>, filters: Array<Record<string, unknown>> = []) {
-  return rows.filter((row) => {
-    for (const filter of filters) {
-      const field = String(filter?.field ?? "").trim();
-      const operator = String(filter?.operator ?? "eq").trim();
-      const value = filter?.value;
-
-      if (!field || value === undefined || value === null || value === "") {
-        continue;
-      }
-
-      const current = row[field];
-
-      if (operator === "eq" && String(current ?? "") !== String(value)) {
-        return false;
-      }
-
-      if (operator === "contains" && !String(current ?? "").includes(String(value))) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-}
-
-function applySorters(rows: Array<Record<string, unknown>>, sorters: Array<Record<string, unknown>> = []) {
-  if (!sorters.length) {
-    return rows;
-  }
-
-  const sorted = [...rows];
-  sorted.sort((left, right) => {
-    for (const sorter of sorters) {
-      const field = String(sorter?.field ?? "").trim();
-      const order = String(sorter?.order ?? "asc").toLowerCase();
-      if (!field) {
-        continue;
-      }
-
-      const l = left[field];
-      const r = right[field];
-
-      if (l === r) {
-        continue;
-      }
-
-      if (l === undefined || l === null) {
-        return order === "desc" ? 1 : -1;
-      }
-
-      if (r === undefined || r === null) {
-        return order === "desc" ? -1 : 1;
-      }
-
-      if (l > r) {
-        return order === "desc" ? -1 : 1;
-      }
-
-      if (l < r) {
-        return order === "desc" ? 1 : -1;
-      }
-    }
-
-    return 0;
-  });
-
-  return sorted;
-}
-
-function ensureArray(input: unknown): Array<Record<string, unknown>> {
-  return Array.isArray(input) ? (input as Array<Record<string, unknown>>) : [];
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T | undefined> {
@@ -178,8 +171,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T | undefin
 
 async function listResource(resource: string, query?: URLSearchParams) {
   const suffix = query && query.size ? `?${query.toString()}` : "";
-  const data = await request<unknown>(`${API_URL}/${resource}${suffix}`, { method: "GET" });
-  return ensureArray(data);
+  return request<unknown>(`${API_URL}/${resource}${suffix}`, { method: "GET" });
 }
 
 export const dataProvider: any = {
@@ -187,56 +179,58 @@ export const dataProvider: any = {
 
   getList: async (params: any): Promise<any> => {
     const resource = String(params.resource ?? "");
-    const filters = Array.isArray(params.filters) ? (params.filters as Array<Record<string, unknown>>) : [];
-    const sorters = Array.isArray(params.sorters) ? (params.sorters as Array<Record<string, unknown>>) : [];
+    const query = toQueryParams({
+      filters: Array.isArray(params.filters) ? params.filters : [],
+      sorters: Array.isArray(params.sorters) ? params.sorters : [],
+      pagination: (params.pagination ?? {}) as Record<string, unknown>,
+    });
 
-    const query = toQueryParams(filters);
-    let rows = await listResource(resource, query);
-    rows = applyFilters(rows, filters);
-    rows = applySorters(rows, sorters);
+    const raw = await listResource(resource, query);
+    const { data, total } = parseListResult(raw);
 
-    const pagination = (params.pagination ?? {}) as Record<string, unknown>;
-    const mode = String(pagination.mode ?? "server");
-    const current = Number(pagination.current ?? 1);
-    const pageSize = Number(pagination.pageSize ?? 10);
-
-    const total = rows.length;
-    const pagedRows =
-      mode === "off"
-        ? rows
-        : rows.slice(Math.max(0, (current - 1) * pageSize), Math.max(0, (current - 1) * pageSize) + pageSize);
-
-    return {
-      data: pagedRows,
-      total,
-    };
+    return { data, total };
   },
 
   getOne: async (params: any): Promise<any> => {
     const resource = String(params.resource ?? "");
-    const id = String(params.id ?? "");
+    const id = String(params.id ?? "").trim();
 
-    const rows = await listResource(resource);
-    const data = rows.find((item) => String(item.id ?? "") === id);
+    const query = new URLSearchParams();
+    query.set("id", id);
+    query.set("page", "1");
+    query.set("pageSize", "1");
 
-    if (!data) {
+    const raw = await listResource(resource, query);
+    const { data } = parseListResult(raw);
+    const row = data[0];
+
+    if (!row) {
       throw {
         message: "Record not found",
         statusCode: 404,
       };
     }
 
-    return { data };
+    return { data: row };
   },
 
   getMany: async (params: any): Promise<any> => {
     const resource = String(params.resource ?? "");
-    const ids = Array.isArray(params.ids) ? params.ids.map((item: unknown) => String(item)) : [];
-    const rows = await listResource(resource);
+    const ids = Array.isArray(params.ids)
+      ? params.ids.map((item: unknown) => String(item ?? "").trim()).filter(Boolean)
+      : [];
 
-    return {
-      data: rows.filter((item) => ids.includes(String(item.id ?? ""))),
-    };
+    if (ids.length === 0) {
+      return { data: [] };
+    }
+
+    const query = new URLSearchParams();
+    query.set("ids", ids.join(","));
+
+    const raw = await listResource(resource, query);
+    const { data } = parseListResult(raw);
+
+    return { data };
   },
 
   getManyReference: async (params: any): Promise<any> => {
