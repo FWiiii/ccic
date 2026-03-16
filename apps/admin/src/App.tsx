@@ -4,19 +4,36 @@ import {
   PictureOutlined,
   ShopOutlined,
 } from "@ant-design/icons";
+import { Suspense, lazy } from "react";
 import { Refine } from "@refinedev/core";
 import { ErrorComponent, ThemedLayoutV2, notificationProvider } from "@refinedev/antd";
+import { Spin } from "antd";
 import routerBindings, { UnsavedChangesNotifier } from "@refinedev/react-router-v6";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
-import { LoginPage } from "./components/LoginPage";
-import {
-  CompaniesPage,
-  InspectionsPage,
-  MediaPage,
-  ProductsPage,
-} from "./resources/pages";
 import { authProvider } from "./providers/auth-provider";
 import { dataProvider, readAuthToken } from "./providers/data-provider";
+
+const LoginPage = lazy(() =>
+  import("./components/LoginPage").then((module) => ({ default: module.LoginPage }))
+);
+const InspectionsPage = lazy(() =>
+  import("./resources/pages").then((module) => ({ default: module.InspectionsPage }))
+);
+const ProductsPage = lazy(() =>
+  import("./resources/pages").then((module) => ({ default: module.ProductsPage }))
+);
+const CompaniesPage = lazy(() =>
+  import("./resources/pages").then((module) => ({ default: module.CompaniesPage }))
+);
+const MediaPage = lazy(() =>
+  import("./resources/pages").then((module) => ({ default: module.MediaPage }))
+);
+
+const routeFallback = (
+  <div style={{ display: "grid", placeItems: "center", minHeight: "40vh" }}>
+    <Spin size="large" />
+  </div>
+);
 
 function RequireAuthLayout() {
   const token = readAuthToken();
@@ -88,18 +105,20 @@ export default function App() {
         warnWhenUnsavedChanges: true,
       }}
     >
-      <Routes>
-        <Route element={<RequireAuthLayout />}>
-          <Route index element={<Navigate to="/inspections" replace />} />
-          <Route path="/inspections" element={<InspectionsPage />} />
-          <Route path="/products" element={<ProductsPage />} />
-          <Route path="/companies" element={<CompaniesPage />} />
-          <Route path="/media" element={<MediaPage />} />
-        </Route>
+      <Suspense fallback={routeFallback}>
+        <Routes>
+          <Route element={<RequireAuthLayout />}>
+            <Route index element={<Navigate to="/inspections" replace />} />
+            <Route path="/inspections" element={<InspectionsPage />} />
+            <Route path="/products" element={<ProductsPage />} />
+            <Route path="/companies" element={<CompaniesPage />} />
+            <Route path="/media" element={<MediaPage />} />
+          </Route>
 
-        <Route path="/login" element={<LoginRoute />} />
-        <Route path="*" element={<ErrorComponent />} />
-      </Routes>
+          <Route path="/login" element={<LoginRoute />} />
+          <Route path="*" element={<ErrorComponent />} />
+        </Routes>
+      </Suspense>
 
       <UnsavedChangesNotifier />
     </Refine>
