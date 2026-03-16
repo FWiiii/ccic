@@ -28,6 +28,7 @@ import type {
   TracePage,
   VerifyStatus,
 } from "../database/database.types";
+import { R2StorageService } from "../media/r2-storage.service";
 
 const isPublishStatus = (value: unknown): value is PublishStatus =>
   ["DRAFT", "PUBLISHED", "ARCHIVED"].includes(String(value));
@@ -66,7 +67,10 @@ const parseAssetIdsCsv = (value: unknown) =>
 @UseGuards(AdminAuthGuard)
 @Controller("api/admin")
 export class AdminController {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly r2StorageService: R2StorageService
+  ) {}
 
   @Get("bootstrap")
   async bootstrap() {
@@ -90,18 +94,25 @@ export class AdminController {
   }
 
   @Post("media/upload-sign")
-  uploadSign() {
-    const objectKey = `uploads/${Date.now()}-${this.databaseService.newId()}.jpg`;
+  async uploadSign(@Body() body: Record<string, unknown>) {
+    const fileName = String(body?.fileName ?? "").trim();
+    const contentType = String(body?.contentType ?? "").trim();
 
-    return {
-      data: {
-        objectKey,
-        uploadUrl: `/mock-upload/${objectKey}`,
-        method: "PUT",
-        headers: {},
-        note: "Scaffold endpoint. Replace with object storage signed URL.",
-      },
-    };
+    if (!fileName) {
+      throw new HttpException({ message: "fileName is required" }, HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const data = await this.r2StorageService.createUploadSign({
+        fileName,
+        contentType: contentType || undefined,
+      });
+
+      return { data };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create upload signature";
+      throw new HttpException({ message }, HttpStatus.SERVICE_UNAVAILABLE);
+    }
   }
 
   @Get("media")

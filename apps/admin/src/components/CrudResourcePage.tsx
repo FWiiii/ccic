@@ -57,6 +57,8 @@ export interface CrudResourcePageProps {
   title: string;
   resource: string;
   fields: CrudFieldConfig[];
+  headerActions?: ReactNode;
+  allowCreate?: boolean;
   publishResource?: "products" | "companies";
   permanentFilters?: CrudFilter[];
   submitOverrides?: Record<string, unknown>;
@@ -84,6 +86,8 @@ export function CrudResourcePage({
   title,
   resource,
   fields,
+  headerActions,
+  allowCreate = true,
   publishResource,
   permanentFilters,
   submitOverrides,
@@ -127,6 +131,10 @@ export function CrudResourcePage({
   };
 
   const openCreate = () => {
+    if (!allowCreate) {
+      return;
+    }
+
     setEditingRecord(null);
     form.resetFields();
 
@@ -335,10 +343,13 @@ export function CrudResourcePage({
       <div className="crud-header">
         <h2>{title}</h2>
         <Space>
+          {headerActions}
           <Button onClick={() => void tableQueryResult?.refetch()}>{"\u5237\u65b0"}</Button>
-          <Button type="primary" onClick={openCreate}>
-            {"\u65b0\u589e"}
-          </Button>
+          {allowCreate ? (
+            <Button type="primary" onClick={openCreate}>
+              {"\u65b0\u589e"}
+            </Button>
+          ) : null}
         </Space>
       </div>
 

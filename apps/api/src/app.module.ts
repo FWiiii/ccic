@@ -7,11 +7,19 @@ import { TokenService } from "./auth/token.service";
 import { DatabaseService } from "./database/database.service";
 import { PrismaService } from "./database/prisma.service";
 import { HealthController } from "./health.controller";
+import { R2StorageService } from "./media/r2-storage.service";
 import { PublicController } from "./public/public.controller";
 
 @Module({
   imports: [],
   controllers: [HealthController, AuthController, PublicController, AdminController],
-  providers: [PrismaService, DatabaseService, TokenService, AdminAuthGuard, SessionCleanupService],
+  providers: [
+    PrismaService,
+    DatabaseService,
+    TokenService,
+    AdminAuthGuard,
+    SessionCleanupService,
+    R2StorageService,
+  ],
 })
 export class AppModule {}

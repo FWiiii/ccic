@@ -1,5 +1,6 @@
-import { useMemo } from "react";
-import { useList } from "@refinedev/core";
+import { useMemo, useState } from "react";
+import { useInvalidate, useList } from "@refinedev/core";
+import { Button, Upload, message } from "antd";
 import {
   CrudResourcePage,
   type CrudSubmitContext,
@@ -90,6 +91,35 @@ function toOptionalString(value: unknown) {
 function asArray(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? (value as Array<Record<string, unknown>>) : [];
 }
+
+type UploadSignResponse = {
+  objectKey: string;
+  uploadUrl: string;
+  method?: string;
+  headers?: Record<string, string>;
+  publicUrl: string;
+  expiresIn?: number;
+};
+
+const readImageDimensions = (file: File) =>
+  new Promise<{ width?: number; height?: number }>((resolve) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      const width = Number.isFinite(image.naturalWidth) ? image.naturalWidth : undefined;
+      const height = Number.isFinite(image.naturalHeight) ? image.naturalHeight : undefined;
+      URL.revokeObjectURL(objectUrl);
+      resolve({ width, height });
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({});
+    };
+
+    image.src = objectUrl;
+  });
 
 function inferProgressStage(events: Array<Record<string, unknown>>): ProgressStage {
   const combined = events.map((item) => `${String(item.eventType ?? "")} ${String(item.title ?? "")}`);
@@ -519,10 +549,84 @@ export function CompaniesPage() {
 }
 
 export function MediaPage() {
+  const [uploading, setUploading] = useState(false);
+  const invalidate = useInvalidate();
+
+  const uploadImageToR2 = async (file: File) => {
+    setUploading(true);
+
+    try {
+      const contentType = file.type || "application/octet-stream";
+      const uploadSign = await adminRequest<UploadSignResponse>("/api/admin/media/upload-sign", {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: file.name,
+          contentType,
+        }),
+      });
+
+      const uploadHeaders = new Headers(uploadSign.headers ?? {});
+      if (!uploadHeaders.has("Content-Type")) {
+        uploadHeaders.set("Content-Type", contentType);
+      }
+
+      const uploadResponse = await fetch(uploadSign.uploadUrl, {
+        method: uploadSign.method || "PUT",
+        headers: uploadHeaders,
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`上传文件失败 (HTTP ${uploadResponse.status})`);
+      }
+
+      const { width, height } = await readImageDimensions(file);
+
+      await adminRequest("/api/admin/media", {
+        method: "POST",
+        body: JSON.stringify({
+          name: file.name,
+          url: uploadSign.publicUrl,
+          mimeType: contentType,
+          sizeBytes: file.size,
+          width,
+          height,
+        }),
+      });
+
+      await invalidate({
+        resource: "media",
+        invalidates: ["list", "many", "detail"],
+      });
+
+      message.success("上传成功，已写入素材库");
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "未知错误";
+      message.error(`上传失败：${detail}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadAction = (
+    <Upload
+      accept="image/*"
+      showUploadList={false}
+      beforeUpload={(file) => {
+        void uploadImageToR2(file as File);
+        return false;
+      }}
+    >
+      <Button loading={uploading}>上传素材到 R2</Button>
+    </Upload>
+  );
+
   return (
     <CrudResourcePage
       title={"\u7d20\u6750\u5e93"}
       resource="media"
+      headerActions={uploadAction}
+      allowCreate={false}
       fields={[
         { key: "name", label: "\u540d\u79f0", required: true },
         { key: "url", label: "URL", required: true },
