@@ -9,7 +9,7 @@ import {
 import { requestJson } from "../providers/api-client";
 
 const INSPECTION_AGENCY_NAME =
-  "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
+  "中国检验认证集团奢侈品鉴定中心";
 
 const PRODUCT_IMAGE_SLOT_CONFIG = [
   { key: "productImageAssetId1", scene: "HERO", sortOrder: 0 },
@@ -141,13 +141,13 @@ export function InspectionsPage() {
 
   return (
     <CrudResourcePage
-      title={`\u9274\u5b9a\u5355\u7ba1\u7406\uff08\u9274\u5b9a\u673a\u6784\u56fa\u5b9a\uff1a${INSPECTION_AGENCY_NAME}\uff09`}
+      title={`鉴定单管理（鉴定机构固定：${INSPECTION_AGENCY_NAME}）`}
       resource="inspections"
       fields={[
-        { key: "sn", label: "\u68c0\u9a8c\u7801SN", required: true },
+        { key: "sn", label: "检验码SN", required: true },
         {
           key: "productId",
-          label: "\u5546\u54c1",
+          label: "商品",
           type: "select",
           required: true,
           options: productOptions,
@@ -155,16 +155,16 @@ export function InspectionsPage() {
         },
         {
           key: "companyId",
-          label: "\u9001\u68c0\u516c\u53f8",
+          label: "送检公司",
           type: "select",
           required: true,
           options: companyOptions,
           tableRender: (value) => companyMap.get(String(value ?? "")) ?? String(value ?? "-"),
         },
-        { key: "inspectionTime", label: "\u9001\u68c0\u65f6\u95f4(ISO)", required: true },
+        { key: "inspectionTime", label: "送检时间(ISO)", required: true },
         {
           key: "result",
-          label: "\u9274\u5b9a\u7ed3\u679c",
+          label: "鉴定结果",
           type: "select",
           required: true,
           options: [
@@ -175,7 +175,7 @@ export function InspectionsPage() {
         },
         {
           key: "status",
-          label: "\u53d1\u5e03\u72b6\u6001",
+          label: "发布状态",
           type: "select",
           required: true,
           options: [
@@ -185,8 +185,8 @@ export function InspectionsPage() {
             { label: "REVOKED", value: "REVOKED" },
           ],
         },
-        { key: "conclusion", label: "\u9274\u5b9a\u7ed3\u8bba", hideInForm: true },
-        { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
+        { key: "conclusion", label: "鉴定结论", hideInForm: true },
+        { key: "updatedAt", label: "更新时间", hideInForm: true },
       ]}
     />
   );
@@ -203,7 +203,7 @@ export function ProductsPage() {
 
   return (
     <CrudResourcePage
-      title={"\u5546\u54c1\u7ba1\u7406"}
+      title={"商品管理"}
       resource="products"
       publishResource="products"
       loadEditFormValues={async (record) => {
@@ -244,51 +244,51 @@ export function ProductsPage() {
       onAfterSubmit={async (context) => {
         const productId = await resolveProductId(context);
         if (!productId) {
-          throw new Error("\u4fdd\u5b58\u5546\u54c1\u540e\u672a\u83b7\u53d6\u5230ID");
+          throw new Error("保存商品后未获取到ID");
         }
 
         await syncProductImages(productId, context.formValues);
       }}
       fields={[
-        { key: "name", label: "\u5546\u54c1\u540d\u79f0", required: true },
+        { key: "name", label: "商品名称", required: true },
         {
           key: "companyId",
-          label: "\u9ed8\u8ba4\u9001\u68c0\u516c\u53f8",
+          label: "默认送检公司",
           type: "select",
           required: true,
           options: companyOptions,
           tableRender: (value) => companyMap.get(String(value ?? "")) ?? String(value ?? "-"),
         },
         { key: "sku", label: "SKU" },
-        { key: "brand", label: "\u54c1\u724c" },
-        { key: "model", label: "\u578b\u53f7" },
-        { key: "material", label: "\u6750\u8d28" },
+        { key: "brand", label: "品牌" },
+        { key: "model", label: "型号" },
+        { key: "material", label: "材质" },
         {
           key: "productImageAssetId1",
-          label: "\u5546\u54c1\u56fe\u72471",
+          label: "商品图片1",
           type: "select",
           hideInTable: true,
           options: mediaOptions,
         },
         {
           key: "productImageAssetId2",
-          label: "\u5546\u54c1\u56fe\u72472",
+          label: "商品图片2",
           type: "select",
           hideInTable: true,
           options: mediaOptions,
         },
         {
           key: "productImageAssetId3",
-          label: "\u5546\u54c1\u56fe\u72473",
+          label: "商品图片3",
           type: "select",
           hideInTable: true,
           options: mediaOptions,
         },
-        { key: "summary", label: "\u6458\u8981", type: "textarea", hideInTable: true },
-        { key: "productInfoHtml", label: "\u5546\u54c1\u8be6\u60c5HTML", type: "textarea", hideInTable: true },
+        { key: "summary", label: "摘要", type: "textarea", hideInTable: true },
+        { key: "productInfoHtml", label: "商品详情HTML", type: "textarea", hideInTable: true },
         {
           key: "status",
-          label: "\u53d1\u5e03\u72b6\u6001",
+          label: "发布状态",
           type: "select",
           options: [
             { label: "DRAFT", value: "DRAFT" },
@@ -296,7 +296,7 @@ export function ProductsPage() {
             { label: "ARCHIVED", value: "ARCHIVED" },
           ],
         },
-        { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
+        { key: "updatedAt", label: "更新时间", hideInForm: true },
       ]}
     />
   );
@@ -311,25 +311,25 @@ export function CompaniesPage() {
 
   return (
     <CrudResourcePage
-      title={"\u9001\u68c0\u516c\u53f8\u7ba1\u7406"}
+      title={"送检公司管理"}
       resource="companies"
       publishResource="companies"
       fields={[
-        { key: "name", label: "\u9001\u68c0\u516c\u53f8\u540d\u79f0", required: true },
-        { key: "shortName", label: "\u7b80\u79f0" },
-        { key: "phone", label: "\u8054\u7cfb\u7535\u8bdd" },
-        { key: "address", label: "\u5730\u5740" },
-        { key: "descriptionHtml", label: "\u516c\u53f8\u4ecb\u7ecdHTML", type: "textarea", hideInTable: true },
+        { key: "name", label: "送检公司名称", required: true },
+        { key: "shortName", label: "简称" },
+        { key: "phone", label: "联系电话" },
+        { key: "address", label: "地址" },
+        { key: "descriptionHtml", label: "公司介绍HTML", type: "textarea", hideInTable: true },
         {
           key: "logoAssetId",
-          label: "Logo\u7d20\u6750",
+          label: "Logo素材",
           type: "select",
           options: mediaOptions,
           tableRender: (value) => mediaMap.get(String(value ?? "")) ?? String(value ?? "-"),
         },
         {
           key: "status",
-          label: "\u53d1\u5e03\u72b6\u6001",
+          label: "发布状态",
           type: "select",
           options: [
             { label: "DRAFT", value: "DRAFT" },
@@ -337,7 +337,7 @@ export function CompaniesPage() {
             { label: "ARCHIVED", value: "ARCHIVED" },
           ],
         },
-        { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
+        { key: "updatedAt", label: "更新时间", hideInForm: true },
       ]}
     />
   );
@@ -414,24 +414,24 @@ export function MediaPage() {
         return false;
       }}
     >
-      <Button loading={uploading}>上传素材到 R2</Button>
+      <Button loading={uploading}>上传素材</Button>
     </Upload>
   );
 
   return (
     <CrudResourcePage
-      title={"\u7d20\u6750\u5e93"}
+      title={"素材库"}
       resource="media"
       headerActions={uploadAction}
       allowCreate={false}
       fields={[
-        { key: "name", label: "\u540d\u79f0", required: true },
+        { key: "name", label: "名称", required: true },
         { key: "url", label: "URL", required: true },
-        { key: "mimeType", label: "MIME\u7c7b\u578b" },
-        { key: "sizeBytes", label: "\u5927\u5c0f(byte)", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "width", label: "\u5bbd\u5ea6", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "height", label: "\u9ad8\u5ea6", type: "number", normalize: (value) => Number(value ?? 0) },
-        { key: "createdAt", label: "\u521b\u5efa\u65f6\u95f4", hideInForm: true },
+        { key: "mimeType", label: "MIME类型" },
+        { key: "sizeBytes", label: "大小(byte)", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "width", label: "宽度", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "height", label: "高度", type: "number", normalize: (value) => Number(value ?? 0) },
+        { key: "createdAt", label: "创建时间", hideInForm: true },
       ]}
     />
   );

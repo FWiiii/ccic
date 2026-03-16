@@ -167,7 +167,7 @@ export function CrudResourcePage({
         form.setFieldsValue({ ...initialValues, ...extraValues });
       }
     } catch {
-      message.error("\u52a0\u8f7d\u7f16\u8f91\u6570\u636e\u5931\u8d25");
+      message.error("加载编辑数据失败");
     } finally {
       setLoadingFormValues(false);
     }
@@ -230,15 +230,15 @@ export function CrudResourcePage({
       });
     }
 
-    message.success(mode === "edit" ? "\u66f4\u65b0\u6210\u529f" : "\u521b\u5efa\u6210\u529f");
+    message.success(mode === "edit" ? "更新成功" : "创建成功");
     closeModal();
     await tableQueryResult?.refetch();
   };
 
   const handleDelete = (record: Record<string, unknown>) => {
     Modal.confirm({
-      title: "\u786e\u8ba4\u5220\u9664",
-      content: "\u8be5\u64cd\u4f5c\u4e0d\u53ef\u64a4\u9500\uff0c\u662f\u5426\u7ee7\u7eed\uff1f",
+      title: "确认删除",
+      content: "该操作不可撤销，是否继续？",
       okButtonProps: { danger: true },
       onOk: async () => {
         await deleteMutate({
@@ -246,7 +246,7 @@ export function CrudResourcePage({
           id: String(record.id),
         });
 
-        message.success("\u5220\u9664\u6210\u529f");
+        message.success("删除成功");
         await tableQueryResult?.refetch();
       },
     });
@@ -263,7 +263,7 @@ export function CrudResourcePage({
       values: { status },
     });
 
-    message.success(status === "PUBLISHED" ? "\u53d1\u5e03\u6210\u529f" : "\u5df2\u4e0b\u7ebf");
+    message.success(status === "PUBLISHED" ? "发布成功" : "已下线");
     await tableQueryResult?.refetch();
   };
 
@@ -305,26 +305,26 @@ export function CrudResourcePage({
     }));
 
   columns.push({
-    title: "\u64cd\u4f5c",
+    title: "操作",
     key: "actions",
     width: 260,
     render: (_: unknown, record: Record<string, unknown>) => (
       <Space wrap>
         <Button size="small" onClick={() => void openEdit(record)}>
-          {"\u7f16\u8f91"}
+          {"编辑"}
         </Button>
         {publishResource ? (
           <>
             <Button size="small" type="primary" onClick={() => void publish(record, "PUBLISHED")}>
-              {"\u53d1\u5e03"}
+              {"发布"}
             </Button>
             <Button size="small" onClick={() => void publish(record, "DRAFT")}>
-              {"\u4e0b\u7ebf"}
+              {"下线"}
             </Button>
           </>
         ) : null}
         <Button size="small" danger onClick={() => handleDelete(record)}>
-          {"\u5220\u9664"}
+          {"删除"}
         </Button>
       </Space>
     ),
@@ -344,10 +344,10 @@ export function CrudResourcePage({
         <h2>{title}</h2>
         <Space>
           {headerActions}
-          <Button onClick={() => void tableQueryResult?.refetch()}>{"\u5237\u65b0"}</Button>
+          <Button onClick={() => void tableQueryResult?.refetch()}>{"刷新"}</Button>
           {allowCreate ? (
             <Button type="primary" onClick={openCreate}>
-              {"\u65b0\u589e"}
+              {"新增"}
             </Button>
           ) : null}
         </Space>
@@ -363,7 +363,7 @@ export function CrudResourcePage({
 
       <Modal
         open={isModalOpen}
-        title={editingRecord ? `\u7f16\u8f91${title}` : `\u65b0\u589e${title}`}
+        title={editingRecord ? `编辑${title}` : `新增${title}`}
         onCancel={closeModal}
         onOk={() => form.submit()}
         confirmLoading={Boolean(creating || updating || loadingFormValues)}
@@ -381,7 +381,7 @@ export function CrudResourcePage({
                 label={field.label}
                 rules={
                   field.required
-                    ? [{ required: true, message: `\u8bf7\u8f93\u5165${field.label}` }]
+                    ? [{ required: true, message: `请输入${field.label}` }]
                     : undefined
                 }
               >

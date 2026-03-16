@@ -71,7 +71,7 @@ export default function App() {
           name: "inspections",
           list: "/inspections",
           meta: {
-            label: "\u9274\u5b9a\u5355",
+            label: "鉴定单",
             icon: <FileSearchOutlined />,
           },
         },
@@ -79,7 +79,7 @@ export default function App() {
           name: "products",
           list: "/products",
           meta: {
-            label: "\u5546\u54c1",
+            label: "商品",
             icon: <ShopOutlined />,
           },
         },
@@ -87,7 +87,7 @@ export default function App() {
           name: "companies",
           list: "/companies",
           meta: {
-            label: "\u9001\u68c0\u516c\u53f8",
+            label: "送检公司",
             icon: <ApartmentOutlined />,
           },
         },
@@ -95,7 +95,7 @@ export default function App() {
           name: "media",
           list: "/media",
           meta: {
-            label: "\u7d20\u6750\u5e93",
+            label: "素材库",
             icon: <PictureOutlined />,
           },
         },
