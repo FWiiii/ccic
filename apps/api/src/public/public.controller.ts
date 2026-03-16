@@ -164,78 +164,61 @@ export class PublicController {
       throw new HttpException({ message: "trace code is required" }, HttpStatus.BAD_REQUEST);
     }
 
-    const result = await this.databaseService.mutateDb((db) => {
-      const traceCode = db.traceCodes.find((item) => item.code === code);
-      if (!traceCode) {
-        return { error: "NOT_FOUND" as const };
-      }
+    const db = await this.databaseService.readDb();
+    const traceCode = db.traceCodes.find((item) => item.code === code);
 
-      const product = db.products.find((item) => item.id === traceCode.productId && item.status === "PUBLISHED");
-      if (!product) {
-        return { error: "NOT_PUBLISHED" as const };
-      }
-
-      const company = db.companies.find((item) => item.id === product.companyId && item.status === "PUBLISHED");
-      if (!company) {
-        return { error: "NOT_PUBLISHED" as const };
-      }
-
-      const now = this.databaseService.nowIso();
-      traceCode.verifyCount += 1;
-      traceCode.lastVerifiedAt = now;
-      if (!traceCode.firstVerifiedAt) {
-        traceCode.firstVerifiedAt = now;
-      }
-
-      db.traceVerifyLogs.unshift({
-        id: this.databaseService.newId(),
-        traceCodeId: traceCode.id,
-        verifyAt: now,
-        isValid: traceCode.verifyStatus === "VALID",
-      });
-
-      const bindings = db.productImages
-        .filter((item) => item.productId === product.id)
-        .sort((a, b) => a.sortOrder - b.sortOrder);
-
-      const pickByScene = (scene: ProductImage["scene"]) =>
-        bindings
-          .filter((item) => item.scene === scene)
-          .map((item) => db.mediaAssets.find((media) => media.id === item.assetId))
-          .filter((item): item is MediaAsset => Boolean(item));
-
-      const data: TracePageAggregate = {
-        traceCode,
-        product,
-        company,
-        inspectionReport: db.inspectionReports.find((item) => item.productId === product.id),
-        heroImage: pickByScene("HERO")[0],
-        companyLogo: company.logoAssetId
-          ? db.mediaAssets.find((item) => item.id === company.logoAssetId)
-          : undefined,
-        carouselImages: pickByScene("CAROUSEL"),
-        companyDetailImages: pickByScene("COMPANY_DETAIL"),
-        detailImages: pickByScene("DETAIL"),
-        traceEvents: db.traceEvents
-          .filter((item) => item.traceCodeId === traceCode.id)
-          .sort((a, b) =>
-            a.eventTime === b.eventTime ? a.sortOrder - b.sortOrder : a.eventTime > b.eventTime ? -1 : 1
-          ),
-      };
-
-      return { data };
-    });
-
-    if ("error" in result) {
-      throw new HttpException(
-        {
-          message: result.error === "NOT_FOUND" ? "Trace code not found" : "Trace code is not published",
-        },
-        HttpStatus.NOT_FOUND
-      );
+    if (!traceCode) {
+      throw new HttpException({ message: "Trace code not found" }, HttpStatus.NOT_FOUND);
     }
 
-    return result;
+    const product = db.products.find((item) => item.id === traceCode.productId && item.status === "PUBLISHED");
+    if (!product) {
+      throw new HttpException({ message: "Trace code is not published" }, HttpStatus.NOT_FOUND);
+    }
+
+    const company = db.companies.find((item) => item.id === product.companyId && item.status === "PUBLISHED");
+    if (!company) {
+      throw new HttpException({ message: "Trace code is not published" }, HttpStatus.NOT_FOUND);
+    }
+
+    const now = this.databaseService.nowIso();
+    await this.databaseService.recordTraceVerification(traceCode.id, traceCode.verifyStatus === "VALID");
+
+    const bindings = db.productImages
+      .filter((item) => item.productId === product.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    const pickByScene = (scene: ProductImage["scene"]) =>
+      bindings
+        .filter((item) => item.scene === scene)
+        .map((item) => db.mediaAssets.find((media) => media.id === item.assetId))
+        .filter((item): item is MediaAsset => Boolean(item));
+
+    const data: TracePageAggregate = {
+      traceCode: {
+        ...traceCode,
+        verifyCount: traceCode.verifyCount + 1,
+        firstVerifiedAt: traceCode.firstVerifiedAt ?? now,
+        lastVerifiedAt: now,
+      },
+      product,
+      company,
+      inspectionReport: db.inspectionReports.find((item) => item.productId === product.id),
+      heroImage: pickByScene("HERO")[0],
+      companyLogo: company.logoAssetId
+        ? db.mediaAssets.find((item) => item.id === company.logoAssetId)
+        : undefined,
+      carouselImages: pickByScene("CAROUSEL"),
+      companyDetailImages: pickByScene("COMPANY_DETAIL"),
+      detailImages: pickByScene("DETAIL"),
+      traceEvents: db.traceEvents
+        .filter((item) => item.traceCodeId === traceCode.id)
+        .sort((a, b) =>
+          a.eventTime === b.eventTime ? a.sortOrder - b.sortOrder : a.eventTime > b.eventTime ? -1 : 1
+        ),
+    };
+
+    return { data };
   }
 
   @Get("trace-pages/:sn")

@@ -1102,6 +1102,49 @@ export class DatabaseService {
     });
   }
 
+  async recordTraceVerification(traceCodeId: string, isValid: boolean): Promise<void> {
+    const normalizedTraceCodeId = asString(traceCodeId).trim();
+    if (!normalizedTraceCodeId) {
+      return;
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction(async (tx) => {
+      const traceCode = await tx.traceCode.findUnique({
+        where: { id: normalizedTraceCodeId },
+        select: {
+          id: true,
+          firstVerifiedAt: true,
+        },
+      });
+
+      if (!traceCode) {
+        return;
+      }
+
+      await tx.traceCode.update({
+        where: { id: normalizedTraceCodeId },
+        data: {
+          verifyCount: {
+            increment: 1,
+          },
+          firstVerifiedAt: traceCode.firstVerifiedAt ?? now,
+          lastVerifiedAt: now,
+        },
+      });
+
+      await tx.traceVerifyLog.create({
+        data: {
+          id: this.newId(),
+          traceCodeId: normalizedTraceCodeId,
+          verifyAt: now,
+          isValid,
+          createdAt: now,
+        },
+      });
+    });
+  }
+
   async cleanupExpiredAdminSessions(): Promise<number> {
     const now = new Date();
 
