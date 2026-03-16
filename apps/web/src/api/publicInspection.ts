@@ -1,5 +1,3 @@
-export type TraceStatus = "SUBMITTED" | "INSPECTING" | "COMPLETED";
-
 export interface PublicInspectionImage {
   id: string;
   url: string;
@@ -31,14 +29,6 @@ export interface PublicInspectionData {
     productName?: string;
     consignorName?: string;
     verificationDate?: string;
-    traceInfo?: {
-      currentStatus?: TraceStatus;
-      steps?: Array<{
-        status: TraceStatus;
-        label: string;
-        reached: boolean;
-      }>;
-    };
   };
 }
 

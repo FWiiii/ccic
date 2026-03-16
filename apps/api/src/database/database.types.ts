@@ -115,14 +115,6 @@ export interface PublicInspectionProductImage extends MediaAsset {
   sortOrder: number;
 }
 
-export type PublicInspectionTraceStatus = "SUBMITTED" | "INSPECTING" | "COMPLETED";
-
-export interface PublicInspectionTraceStep {
-  status: PublicInspectionTraceStatus;
-  label: string;
-  reached: boolean;
-}
-
 export interface PublicInspectionAggregate {
   inspectionAgencyName: string;
   inspection: Inspection;
@@ -130,15 +122,10 @@ export interface PublicInspectionAggregate {
     images: PublicInspectionProductImage[];
   };
   company: Company;
-  events: InspectionEvent[];
   display: {
     productName: string;
     consignorName: string;
     verificationDate: string;
-    traceInfo: {
-      currentStatus: PublicInspectionTraceStatus;
-      steps: PublicInspectionTraceStep[];
-    };
   };
 }
 

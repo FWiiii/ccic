@@ -11,20 +11,6 @@ import { requestJson } from "../providers/api-client";
 const INSPECTION_AGENCY_NAME =
   "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
 
-type ProgressStage = "SUBMITTED" | "INSPECTING" | "COMPLETED";
-
-const PROGRESS_STAGE_OPTIONS: FieldOption[] = [
-  { label: "\u5df2\u9001\u68c0", value: "SUBMITTED" },
-  { label: "\u68c0\u6d4b\u4e2d", value: "INSPECTING" },
-  { label: "\u5df2\u68c0\u6d4b", value: "COMPLETED" },
-];
-
-const TRACK_EVENT_CONFIG = [
-  { title: "\u5df2\u9001\u68c0", eventType: "SUBMIT" },
-  { title: "\u68c0\u6d4b\u4e2d", eventType: "INSPECTION" },
-  { title: "\u5df2\u68c0\u6d4b", eventType: "CERTIFIED" },
-] as const;
-
 const PRODUCT_IMAGE_SLOT_CONFIG = [
   { key: "productImageAssetId1", scene: "HERO", sortOrder: 0 },
   { key: "productImageAssetId2", scene: "CAROUSEL", sortOrder: 1 },
@@ -75,68 +61,10 @@ const readImageDimensions = (file: File) =>
     image.src = objectUrl;
   });
 
-function inferProgressStage(events: Array<Record<string, unknown>>): ProgressStage {
-  const combined = events.map((item) => `${String(item.eventType ?? "")} ${String(item.title ?? "")}`);
-
-  if (combined.some((entry) => entry.includes("CERTIFIED") || entry.includes("\u5df2\u68c0\u6d4b"))) {
-    return "COMPLETED";
-  }
-
-  if (
-    combined.some(
-      (entry) =>
-        entry.includes("INSPECTION") ||
-        entry.includes("SAMPLE_RECEIVED") ||
-        entry.includes("\u68c0\u6d4b\u4e2d")
-    )
-  ) {
-    return "INSPECTING";
-  }
-
-  return "SUBMITTED";
-}
-
-function buildEventTimes(inspectionTime: unknown) {
-  const raw = String(inspectionTime ?? "").trim();
-  const baseDate = new Date(raw);
-  const start = Number.isNaN(baseDate.getTime()) ? new Date() : baseDate;
-
-  return [0, 1, 2].map((offsetMinutes) =>
-    new Date(start.getTime() + offsetMinutes * 60_000).toISOString()
-  );
-}
-
-async function listInspectionEvents(inspectionId: string) {
-  return asArray(
-    await adminRequest<unknown>(`/api/admin/inspection-events?inspectionId=${encodeURIComponent(inspectionId)}`)
-  );
-}
-
 async function listProductImages(productId: string) {
   return asArray(
     await adminRequest<unknown>(`/api/admin/product-images?productId=${encodeURIComponent(productId)}`)
   );
-}
-
-async function resolveInspectionId(context: CrudSubmitContext) {
-  const fromContext = String(context.recordId ?? "").trim();
-  if (fromContext) {
-    return fromContext;
-  }
-
-  const fromSaved = String(context.savedRecord?.id ?? "").trim();
-  if (fromSaved) {
-    return fromSaved;
-  }
-
-  const sn = String(context.savedRecord?.sn ?? context.requestPayload.sn ?? context.formValues.sn ?? "").trim();
-
-  if (!sn) {
-    return "";
-  }
-
-  const rows = asArray(await adminRequest<unknown>(`/api/admin/inspections?sn=${encodeURIComponent(sn)}`));
-  return String(rows[0]?.id ?? "").trim();
 }
 
 async function resolveProductId(context: CrudSubmitContext) {
@@ -146,34 +74,6 @@ async function resolveProductId(context: CrudSubmitContext) {
   }
 
   return String(context.savedRecord?.id ?? "").trim();
-}
-
-async function syncInspectionTrack(
-  inspectionId: string,
-  stage: ProgressStage,
-  inspectionTime: unknown
-) {
-  const eventCount = stage === "SUBMITTED" ? 1 : stage === "INSPECTING" ? 2 : 3;
-  const eventTimes = buildEventTimes(inspectionTime);
-  const events = [];
-
-  for (let index = 0; index < eventCount; index += 1) {
-    const config = TRACK_EVENT_CONFIG[index];
-    events.push({
-      eventType: config.eventType,
-      title: config.title,
-      eventTime: eventTimes[index],
-      sortOrder: index,
-    });
-  }
-
-  await adminRequest("/api/admin/inspection-events/replace", {
-    method: "POST",
-    body: JSON.stringify({
-      inspectionId,
-      events,
-    }),
-  });
 }
 
 async function syncProductImages(productId: string, formValues: Record<string, unknown>) {
@@ -243,37 +143,6 @@ export function InspectionsPage() {
     <CrudResourcePage
       title={`\u9274\u5b9a\u5355\u7ba1\u7406\uff08\u9274\u5b9a\u673a\u6784\u56fa\u5b9a\uff1a${INSPECTION_AGENCY_NAME}\uff09`}
       resource="inspections"
-      createInitialValues={{ progressStage: "SUBMITTED" }}
-      loadEditFormValues={async (record) => {
-        const inspectionId = String(record.id ?? "").trim();
-        if (!inspectionId) {
-          return { progressStage: "SUBMITTED" as ProgressStage };
-        }
-
-        const events = await listInspectionEvents(inspectionId);
-
-        return {
-          progressStage: inferProgressStage(events),
-        };
-      }}
-      onAfterSubmit={async (context) => {
-        const inspectionId = await resolveInspectionId(context);
-        if (!inspectionId) {
-          throw new Error("\u4fdd\u5b58\u9274\u5b9a\u5355\u540e\u672a\u83b7\u53d6\u5230ID");
-        }
-
-        const stageRaw = String(context.formValues.progressStage ?? "SUBMITTED").toUpperCase();
-        const stage: ProgressStage =
-          stageRaw === "INSPECTING" || stageRaw === "COMPLETED" ? (stageRaw as ProgressStage) : "SUBMITTED";
-
-        await syncInspectionTrack(
-          inspectionId,
-          stage,
-          context.savedRecord?.inspectionTime ??
-            context.requestPayload.inspectionTime ??
-            context.formValues.inspectionTime
-        );
-      }}
       fields={[
         { key: "sn", label: "\u68c0\u9a8c\u7801SN", required: true },
         {
@@ -316,15 +185,7 @@ export function InspectionsPage() {
             { label: "REVOKED", value: "REVOKED" },
           ],
         },
-        { key: "conclusion", label: "\u9274\u5b9a\u7ed3\u8bba", type: "textarea", hideInTable: true },
-        {
-          key: "progressStage",
-          label: "\u8f68\u8ff9\u9636\u6bb5",
-          type: "select",
-          required: true,
-          hideInTable: true,
-          options: PROGRESS_STAGE_OPTIONS,
-        },
+        { key: "conclusion", label: "\u9274\u5b9a\u7ed3\u8bba", hideInForm: true },
         { key: "updatedAt", label: "\u66f4\u65b0\u65f6\u95f4", hideInForm: true },
       ]}
     />

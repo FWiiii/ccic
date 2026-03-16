@@ -3,9 +3,6 @@ import type { PublicInspectionData } from "../api/publicInspection";
 import type { TraceStatus } from "../components/tabs/TraceInfoTab";
 import { normalizeImageUrls } from "../utils/normalizeImageUrls";
 
-const isTraceStatus = (value: unknown): value is TraceStatus =>
-  value === "SUBMITTED" || value === "INSPECTING" || value === "COMPLETED";
-
 const normalizeDateString = (value: string) => {
   const text = String(value ?? "").trim();
   if (!text) {
@@ -70,11 +67,6 @@ export function useInspectionDisplayModel({
   const conclusion = inspectionData?.inspection?.conclusion?.trim() || undefined;
 
   const currentTraceStatus = useMemo<TraceStatus>(() => {
-    const statusFromApi = inspectionData?.display?.traceInfo?.currentStatus;
-    if (isTraceStatus(statusFromApi)) {
-      return statusFromApi;
-    }
-
     return inferTraceStatusFromInspection(String(inspectionData?.inspection?.status ?? ""));
   }, [inspectionData]);
 

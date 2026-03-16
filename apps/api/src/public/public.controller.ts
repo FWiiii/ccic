@@ -1,5 +1,5 @@
 import { Controller, Get, HttpException, HttpStatus, Param, Query } from "@nestjs/common";
-import type { MediaAsset, ProductImage, PublicInspectionAggregate, PublicInspectionTraceStatus, TracePageAggregate } from "../database/database.types";
+import type { MediaAsset, ProductImage, PublicInspectionAggregate, TracePageAggregate } from "../database/database.types";
 import { DatabaseService } from "../database/database.service";
 
 const parseAssetIdsCsv = (value: unknown) =>
@@ -9,18 +9,6 @@ const parseAssetIdsCsv = (value: unknown) =>
     .filter(Boolean);
 
 const INSPECTION_AGENCY_NAME = "\u4e2d\u56fd\u68c0\u9a8c\u8ba4\u8bc1\u96c6\u56e2\u5962\u4f88\u54c1\u9274\u5b9a\u4e2d\u5fc3";
-
-const TRACE_STEPS: PublicInspectionAggregate["display"]["traceInfo"]["steps"] = [
-  { status: "SUBMITTED", label: "\u5df2\u9001\u68c0", reached: false },
-  { status: "INSPECTING", label: "\u68c0\u6d4b\u4e2d", reached: false },
-  { status: "COMPLETED", label: "\u5df2\u68c0\u6d4b", reached: false },
-];
-
-const TRACE_STATUS_RANK: Record<PublicInspectionTraceStatus, number> = {
-  SUBMITTED: 1,
-  INSPECTING: 2,
-  COMPLETED: 3,
-};
 
 const formatVerificationDate = (value: string) => {
   const text = String(value ?? "").trim();
@@ -42,38 +30,16 @@ const formatVerificationDate = (value: string) => {
   return text;
 };
 
-const resolveTraceStatus = (
-  inspectionStatus: PublicInspectionAggregate["inspection"]["status"],
-  events: PublicInspectionAggregate["events"]
-): PublicInspectionTraceStatus => {
-  if (events.some((item) => item.eventType === "CERTIFIED" || item.eventType === "PUBLISHED")) {
-    return "COMPLETED";
+const resolveInspectionConclusion = (result: PublicInspectionAggregate["inspection"]["result"]) => {
+  if (result === "PASS") {
+    return "送检样品符合品牌/制造商的技术信息或工艺特征";
   }
 
-  if (events.some((item) => item.eventType === "INSPECTION" || item.eventType === "SAMPLE_RECEIVED")) {
-    return "INSPECTING";
+  if (result === "FAIL") {
+    return "送检样品不符合品牌/制造商的技术信息或工艺特征";
   }
 
-  if (inspectionStatus === "PUBLISHED" || inspectionStatus === "REVOKED") {
-    return "COMPLETED";
-  }
-
-  if (inspectionStatus === "REVIEWED") {
-    return "INSPECTING";
-  }
-
-  return "SUBMITTED";
-};
-
-const buildTraceSteps = (
-  currentStatus: PublicInspectionTraceStatus
-): PublicInspectionAggregate["display"]["traceInfo"]["steps"] => {
-  const currentRank = TRACE_STATUS_RANK[currentStatus];
-
-  return TRACE_STEPS.map((item) => ({
-    ...item,
-    reached: TRACE_STATUS_RANK[item.status] <= currentRank,
-  }));
+  return "送检样品正在鉴定中，暂未形成最终鉴定结论";
 };
 
 const isLegacyTraceApiEnabled = () => String(process.env.ENABLE_LEGACY_TRACE_APIS ?? "").toLowerCase() === "true";
@@ -136,17 +102,12 @@ export class PublicController {
       })
       .filter((item): item is PublicInspectionAggregate["product"]["images"][number] => Boolean(item));
 
-    const events = db.inspectionEvents
-      .filter((item) => item.inspectionId === inspection.id)
-      .sort((a, b) =>
-        a.eventTime === b.eventTime ? a.sortOrder - b.sortOrder : a.eventTime > b.eventTime ? -1 : 1
-      );
-
-    const currentStatus = resolveTraceStatus(inspection.status, events);
-
     const data: PublicInspectionAggregate = {
       inspectionAgencyName: INSPECTION_AGENCY_NAME,
-      inspection,
+      inspection: {
+        ...inspection,
+        conclusion: resolveInspectionConclusion(inspection.result),
+      },
       product: {
         ...product,
         name: product.name,
@@ -156,15 +117,10 @@ export class PublicController {
         ...company,
         name: company.name,
       },
-      events,
       display: {
         productName: product.name,
         consignorName: company.name,
         verificationDate: formatVerificationDate(inspection.inspectionTime),
-        traceInfo: {
-          currentStatus,
-          steps: buildTraceSteps(currentStatus),
-        },
       },
     };
 

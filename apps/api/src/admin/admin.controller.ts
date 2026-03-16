@@ -56,6 +56,18 @@ const isInspectionImageScene = (value: unknown): value is InspectionImage["scene
 const isInspectionEventType = (value: unknown): value is InspectionEvent["eventType"] =>
   ["SUBMIT", "SAMPLE_RECEIVED", "INSPECTION", "CERTIFIED", "PUBLISHED", "OTHER"].includes(String(value));
 
+const resolveInspectionConclusion = (result: Inspection["result"]) => {
+  if (result === "PASS") {
+    return "送检样品符合品牌/制造商的技术信息或工艺特征";
+  }
+
+  if (result === "FAIL") {
+    return "送检样品不符合品牌/制造商的技术信息或工艺特征";
+  }
+
+  return "送检样品正在鉴定中，暂未形成最终鉴定结论";
+};
+
 const toNumber = (value: unknown, fallback = 0) => {
   const num = typeof value === "number" ? value : Number(value);
   return Number.isFinite(num) ? num : fallback;
@@ -1103,7 +1115,7 @@ export class AdminController {
       inspectionTime: item.inspectionTime.toISOString(),
       result: item.result as Inspection["result"],
       status: item.status as Inspection["status"],
-      conclusion: item.conclusion ?? undefined,
+      conclusion: resolveInspectionConclusion(item.result as Inspection["result"]),
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
     }));
@@ -1165,7 +1177,7 @@ export class AdminController {
         return { error: "COMPANY_NOT_FOUND" as const };
       }
 
-      const conclusionRaw = body?.conclusion === undefined ? "" : String(body.conclusion ?? "");
+      const inspectionResult = isInspectionResult(resultValue) ? resultValue : "PENDING";
 
       const item: Inspection = {
         id: this.databaseService.newId(),
@@ -1173,9 +1185,9 @@ export class AdminController {
         productId,
         companyId,
         inspectionTime,
-        result: isInspectionResult(resultValue) ? resultValue : "PENDING",
+        result: inspectionResult,
         status: isInspectionStatus(statusValue) ? statusValue : "DRAFT",
-        conclusion: conclusionRaw.trim() ? conclusionRaw : undefined,
+        conclusion: resolveInspectionConclusion(inspectionResult),
         createdAt: now,
         updatedAt: now,
       };
@@ -1276,11 +1288,7 @@ export class AdminController {
         item.status = statusValue;
       }
 
-      if (body?.conclusion !== undefined) {
-        const conclusion = String(body.conclusion ?? "");
-        item.conclusion = conclusion.trim() ? conclusion : undefined;
-      }
-
+      item.conclusion = resolveInspectionConclusion(item.result);
 
       item.updatedAt = this.databaseService.nowIso();
       return { data: item };
