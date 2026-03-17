@@ -7,6 +7,7 @@ import {
   writeAuthToken,
   writeStoredUserRaw,
 } from "./data-provider";
+import { buildApiUrl } from "./api-client";
 
 function safeParseJson<T>(text: string): T | null {
   if (!text.trim()) {
@@ -35,7 +36,7 @@ function readStoredUser() {
 
 export const authProvider: AuthBindings = {
   login: async ({ username, password }) => {
-    const response = await fetch("/api/admin/auth/login", {
+    const response = await fetch(buildApiUrl("/api/admin/auth/login"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

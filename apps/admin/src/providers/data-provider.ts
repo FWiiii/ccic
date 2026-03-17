@@ -1,4 +1,4 @@
-import { requestJson } from "./api-client";
+import { buildApiUrl, requestJson } from "./api-client";
 import {
   clearAuthToken,
   clearStoredUser,
@@ -118,7 +118,7 @@ async function listResource(resource: string, query?: URLSearchParams) {
 }
 
 export const dataProvider: any = {
-  getApiUrl: () => API_URL,
+  getApiUrl: () => buildApiUrl(API_URL),
 
   getList: async (params: any): Promise<any> => {
     const resource = String(params.resource ?? "");

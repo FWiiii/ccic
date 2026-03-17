@@ -36,6 +36,28 @@ function normalizeErrorMessage(payload: ApiErrorPayload | null, responseText: st
   return responseText.trim() ? `Request failed (${status})` : "Empty response from API service";
 }
 
+const readApiBaseUrl = () => String(import.meta.env.VITE_API_BASE_URL ?? "").trim().replace(/\/+$/, "");
+
+const isAbsoluteUrl = (value: string) => /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(value);
+
+export function buildApiUrl(path: string) {
+  const normalizedPath = String(path ?? "").trim();
+  if (!normalizedPath || isAbsoluteUrl(normalizedPath)) {
+    return normalizedPath;
+  }
+
+  const apiBase = readApiBaseUrl();
+  if (!apiBase) {
+    return normalizedPath;
+  }
+
+  if (normalizedPath.startsWith("/")) {
+    return `${apiBase}${normalizedPath}`;
+  }
+
+  return `${apiBase}/${normalizedPath}`;
+}
+
 export async function requestJson<T>(
   path: string,
   init?: RequestInit & { includeAuth?: boolean }
@@ -54,7 +76,7 @@ export async function requestJson<T>(
     }
   }
 
-  const response = await fetch(path, {
+  const response = await fetch(buildApiUrl(path), {
     ...init,
     headers,
   });
@@ -83,4 +105,3 @@ export async function requestJson<T>(
 
   return payload as T;
 }
-
