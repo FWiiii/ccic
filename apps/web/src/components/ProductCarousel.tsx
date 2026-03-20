@@ -4,15 +4,17 @@ import { normalizeImageUrls } from "../utils/normalizeImageUrls";
 interface ProductCarouselProps {
   images?: string[];
   onPreview: (src: string) => void;
+  isLoading?: boolean;
 }
 
 const AUTO_PLAY_INTERVAL_MS = 3500;
 const SWIPE_THRESHOLD_PX = 40;
 
-export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
+export function ProductCarousel({ images, onPreview, isLoading = false }: ProductCarouselProps) {
   const normalizedImages = useMemo(() => normalizeImageUrls(images), [images]);
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [loadedState, setLoadedState] = useState<Record<number, boolean>>({});
   const previousImagesRef = useRef<string[] | null>(null);
   const touchStartXRef = useRef<number | null>(null);
   const touchDeltaXRef = useRef(0);
@@ -26,6 +28,7 @@ export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
 
     if (hasChanged) {
       setActiveIndex(0);
+      setLoadedState({});
       previousImagesRef.current = normalizedImages;
     }
   }, [normalizedImages]);
@@ -80,6 +83,19 @@ export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
     touchDeltaXRef.current = 0;
   };
 
+  const markImageLoaded = (index: number) => {
+    setLoadedState((prev) => {
+      if (prev[index]) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [index]: true,
+      };
+    });
+  };
+
   return (
     <div className="indexBanner">
       <div id="slide" style={{ overflow: "hidden", textAlign: "center" }}>
@@ -94,12 +110,28 @@ export function ProductCarousel({ images, onPreview }: ProductCarouselProps) {
             {normalizedImages.length > 0 ? (
               normalizedImages.map((item, index) => (
                 <div key={`${item}-${index}`} className="swiper-slide" style={{ height: "270px" }}>
-                  <img src={item} style={{ height: "270px" }} onClick={() => onPreview(item)} alt="" />
+                  <div className={`app-carousel-image-shell ${loadedState[index] ? "is-ready" : "is-loading"}`}>
+                    <img
+                      src={item}
+                      style={{ height: "270px" }}
+                      onClick={() => onPreview(item)}
+                      onLoad={() => markImageLoaded(index)}
+                      onError={() => markImageLoaded(index)}
+                      className="app-carousel-image"
+                      loading={index === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                      alt=""
+                    />
+                  </div>
                 </div>
               ))
             ) : (
               <div className="swiper-slide" style={{ height: "270px", display: "grid", placeItems: "center" }}>
-                <span style={{ color: "#999", fontSize: "14px" }}>暂无轮播图</span>
+                {isLoading ? (
+                  <div className="app-carousel-image-shell is-loading app-carousel-image-shell--empty" aria-hidden="true"></div>
+                ) : (
+                  <span style={{ color: "#999", fontSize: "14px" }}>暂无轮播图</span>
+                )}
               </div>
             )}
           </div>

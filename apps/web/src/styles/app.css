@@ -411,3 +411,71 @@ body,
 .tabs.app-tabs-lock > .tab.app-tab-panel.is-active {
   display: block !important;
 }
+
+.app-inline-skeleton {
+  display: inline-block;
+  vertical-align: middle;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #eef2f7 25%, #f6f9fc 37%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: app-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.app-inline-skeleton--name {
+  width: 48%;
+  min-width: 110px;
+  height: 0.72rem;
+}
+
+.app-inline-skeleton--agency {
+  width: 56%;
+  min-width: 140px;
+  height: 0.72rem;
+}
+
+.app-carousel-image-shell {
+  position: relative;
+  width: 100%;
+  height: 270px;
+  background-color: #f5f7fa;
+  overflow: hidden;
+}
+
+.app-carousel-image-shell--empty {
+  width: 95%;
+  height: 230px;
+  border-radius: 10px;
+}
+
+.app-carousel-image-shell.is-loading::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #eef2f7 25%, #f6f9fc 37%, #eef2f7 63%);
+  background-size: 400% 100%;
+  animation: app-skeleton-shimmer 1.2s ease-in-out infinite;
+  z-index: 1;
+}
+
+.app-carousel-image {
+  width: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.24s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.app-carousel-image-shell.is-ready .app-carousel-image {
+  opacity: 1;
+}
+
+@keyframes app-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: 0 0;
+  }
+}

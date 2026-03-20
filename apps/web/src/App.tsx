@@ -1,4 +1,4 @@
-import { Suspense, lazy, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { HeroImage } from "./components/HeroImage";
 import { ImagePreviewModal } from "./components/ImagePreviewModal";
 import { PageFooter } from "./components/PageFooter";
@@ -46,6 +46,12 @@ export default function App() {
     inspectionData,
     inspectionAgencyFallback: INSPECTION_AGENCY_FALLBACK,
   });
+  const isInspectionLoading = status === "loading";
+
+  useEffect(() => {
+    // Warm up lazy chunk so switching to company tab avoids a visible blank wait.
+    void import("./components/tabs/CompanyInfoTab");
+  }, []);
 
   if (isSearchPage) {
     return <SearchPage />;
@@ -65,15 +71,19 @@ export default function App() {
         <HeroImage />
         <PageFooter />
 
-        {status === "loading" ? (
+        {isInspectionLoading ? (
           <div className="app-query-status">
             {"正在根据 SN 查询鉴定结果..."}
           </div>
         ) : null}
 
         <div className="content contentDivOne native-scroll" style={{ paddingTop: 0 }}>
-          <ProductCarousel images={bannerImages} onPreview={setPreviewImage} />
-          <ProductSummary productName={productName} inspectionAgencyName={inspectionAgencyName} />
+          <ProductCarousel images={bannerImages} onPreview={setPreviewImage} isLoading={isInspectionLoading} />
+          <ProductSummary
+            productName={productName}
+            inspectionAgencyName={inspectionAgencyName}
+            isLoading={isInspectionLoading}
+          />
           <TopTabs activeTab={activeTab} onChange={setActiveTab} />
 
           <div className="c-clear-left">
