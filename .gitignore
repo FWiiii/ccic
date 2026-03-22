@@ -1,5 +1,6 @@
 node_modules
 dist
+.worktrees
 .vscode
 .DS_Store
 .env
