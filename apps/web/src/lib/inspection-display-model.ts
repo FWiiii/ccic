@@ -32,19 +32,19 @@ export function buildInspectionDisplayModel(
   inspectionData: PublicInspectionData,
   inspectionAgencyFallback: string
 ) {
-  const productImages = normalizeImageUrls((inspectionData.product?.images ?? []).map((item) => item?.url));
+  const productImages = normalizeImageUrls(inspectionData.product.images.map((item) => item?.url));
 
   return {
     bannerImages: productImages,
     traceSampleImages: productImages,
-    productName: inspectionData.display?.productName?.trim() || inspectionData.product?.name?.trim() || "-",
+    productName: inspectionData.display?.productName?.trim() || inspectionData.product.name.trim() || "-",
     inspectionAgencyName: inspectionData.inspectionAgencyName?.trim() || inspectionAgencyFallback,
-    consignorName: inspectionData.display?.consignorName?.trim() || inspectionData.company?.name?.trim() || "-",
+    consignorName: inspectionData.display?.consignorName?.trim() || inspectionData.company.name.trim() || "-",
     verificationDate:
       inspectionData.display?.verificationDate?.trim() ||
-      normalizeDateString(inspectionData.inspection?.inspectionTime ?? "") ||
+      normalizeDateString(inspectionData.inspection.inspectionTime) ||
       "-",
-    conclusion: inspectionData.inspection?.conclusion?.trim() || undefined,
-    currentTraceStatus: inferTraceStatusFromInspection(String(inspectionData.inspection?.status ?? "")),
+    conclusion: inspectionData.inspection.conclusion?.trim() || undefined,
+    currentTraceStatus: inferTraceStatusFromInspection(inspectionData.inspection.status),
   };
 }

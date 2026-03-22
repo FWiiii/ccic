@@ -35,9 +35,13 @@ export interface PublicInspectionData {
 }
 
 export class PublicInspectionRequestError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, cause?: unknown) {
     super(message);
     this.name = "PublicInspectionRequestError";
+
+    if (cause !== undefined) {
+      (this as Error & { cause?: unknown }).cause = cause;
+    }
   }
 }
 
@@ -45,9 +49,14 @@ export async function fetchPublicInspectionBySn(
   sn: string,
   options: { runtime: "server"; internalBaseUrl?: string } | { runtime: "client"; publicBaseUrl?: string }
 ): Promise<PublicInspectionData> {
-  const response = await fetch(buildPublicInspectionUrl(sn, options), {
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(buildPublicInspectionUrl(sn, options), {
+      cache: "no-store",
+    });
+  } catch (error) {
+    throw new PublicInspectionRequestError("查询失败(网络异常)", 0, error);
+  }
 
   const payload = (await response.json().catch(() => ({}))) as { data?: unknown; message?: string };
 
