@@ -1,4 +1,3 @@
-import "../styles/trace-notfound.css";
 import qrcodeImage from "../assets/template/mu/static/picture/qrcode-trace.jpg";
 
 interface TraceNotFoundPageProps {

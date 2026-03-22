@@ -10,9 +10,9 @@ import { TraceInfoTab } from "./components/tabs/TraceInfoTab";
 import { useInspectionDisplayModel } from "./hooks/useInspectionDisplayModel";
 import { useInspectionQuery } from "./hooks/useInspectionQuery";
 import { useRouteType } from "./hooks/useRouteType";
-import { FeedbackPage } from "./pages/FeedbackPage";
-import { SearchPage } from "./pages/SearchPage";
-import { TraceNotFoundPage } from "./pages/TraceNotFoundPage";
+import { FeedbackPage } from "./views/FeedbackPage";
+import { SearchPage } from "./views/SearchPage";
+import { TraceNotFoundPage } from "./views/TraceNotFoundPage";
 
 const INSPECTION_AGENCY_FALLBACK =
   "中国检验认证集团奢侈品鉴定中心";

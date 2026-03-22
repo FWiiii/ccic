@@ -1,6 +1,4 @@
 import { useMemo, useState } from "react";
-import "../assets/template/mu/static/css/search.css";
-import "../styles/search-authen.css";
 import logoImage from "../assets/template/mu/static/picture/logo.jpg";
 import falseImage from "../assets/template/mu/static/picture/infobg-false.jpg";
 import okImage from "../assets/template/mu/static/picture/infobg-ture.jpg";
