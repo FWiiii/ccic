@@ -1,16 +1,32 @@
 import React from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FeedbackPage } from "../FeedbackPage";
+
+const mockRouterBack = vi.fn();
+const mockRouterPush = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
-    back: vi.fn(),
-    push: vi.fn(),
+    back: mockRouterBack,
+    push: mockRouterPush,
   }),
 }));
 
 describe("FeedbackPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("pushes to home when clicking back in default history state", () => {
+    render(<FeedbackPage />);
+
+    fireEvent.click(screen.getByRole("button", { name: "返回" }));
+
+    expect(mockRouterPush).toHaveBeenCalledWith("/");
+    expect(mockRouterBack).not.toHaveBeenCalled();
+  });
+
   it("opens the success dialog after a valid submit", () => {
     render(<FeedbackPage />);
 
