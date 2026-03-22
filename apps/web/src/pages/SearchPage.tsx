@@ -40,7 +40,7 @@ export function SearchPage() {
     <div className="page-group">
       <div className="page page-current" id="search-page">
         <div className="content search-div" style={{ top: "0.8rem", position: "relative", zIndex: 10 }}>
-          <img className="authen-comp-logo" src={logoImage} alt="logo" />
+          <img className="authen-comp-logo" src={logoImage.src} alt="logo" />
           <div className="authen-content-frame">
             <div className="auth-search-item">
               <input
@@ -65,16 +65,21 @@ export function SearchPage() {
               </p>
 
               <div className="auth-result-frame">
-                <img className="c-w100p auth-img-false c-none" src={falseImage} alt="false" style={{ display: "none" }} />
+                <img
+                  className="c-w100p auth-img-false c-none"
+                  src={falseImage.src}
+                  alt="false"
+                  style={{ display: "none" }}
+                />
                 <img
                   className={`c-w100p auth-img-ok ${isOk ? "" : "c-none"}`}
-                  src={okImage}
+                  src={okImage.src}
                   alt="ok"
                   style={{ display: isOk ? "block" : "none" }}
                 />
                 <img
                   className={`c-w100p auth-img-warn ${isFail ? "" : "c-none"}`}
-                  src={warnImage}
+                  src={warnImage.src}
                   alt="warn"
                   style={{ display: isFail ? "block" : "none" }}
                 />
@@ -130,4 +135,3 @@ export function SearchPage() {
     </div>
   );
 }
-

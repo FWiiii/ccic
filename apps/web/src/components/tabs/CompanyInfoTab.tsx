@@ -29,8 +29,8 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
         <img
           className="tab2-img"
           id="logo"
-          src={companyLogo}
-          onClick={() => onPreview(companyLogo)}
+          src={companyLogo.src}
+          onClick={() => onPreview(companyLogo.src)}
           loading="lazy"
           decoding="async"
           alt=""
@@ -79,20 +79,20 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
           <p style={{ textAlign: "center" }}>
             <span style={descriptionStyle}>
               <img
-                src={companyImageA}
+                src={companyImageA.src}
                 title="1666591927040077430.png"
                 alt=""
                 style={richImageStyle}
-                onClick={() => onPreview(companyImageA)}
+                onClick={() => onPreview(companyImageA.src)}
                 loading="lazy"
                 decoding="async"
               />
               <img
-                src={companyImageB}
+                src={companyImageB.src}
                 title="1666591971967015074.jpg"
                 alt=""
                 style={richImageStyle}
-                onClick={() => onPreview(companyImageB)}
+                onClick={() => onPreview(companyImageB.src)}
                 loading="lazy"
                 decoding="async"
               />
@@ -104,11 +104,11 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
           <p>
             <span style={descriptionStyle}>
               <img
-                src={companyImageC}
+                src={companyImageC.src}
                 title="1590048828117098165.jpg"
                 alt=""
                 style={richImageStyle}
-                onClick={() => onPreview(companyImageC)}
+                onClick={() => onPreview(companyImageC.src)}
                 loading="lazy"
                 decoding="async"
               />
@@ -116,20 +116,20 @@ export function CompanyInfoTab({ onPreview }: CompanyInfoTabProps) {
           </p>
           <p>
             <img
-              src={companyImageD}
+              src={companyImageD.src}
               title="1590048841611005669.jpg"
               alt=""
               style={richImageStyle}
-              onClick={() => onPreview(companyImageD)}
+              onClick={() => onPreview(companyImageD.src)}
               loading="lazy"
               decoding="async"
             />
             <img
-              src={companyImageE}
+              src={companyImageE.src}
               title="1590048848871028263.jpg"
               alt=""
               style={richImageStyle}
-              onClick={() => onPreview(companyImageE)}
+              onClick={() => onPreview(companyImageE.src)}
               loading="lazy"
               decoding="async"
             />
