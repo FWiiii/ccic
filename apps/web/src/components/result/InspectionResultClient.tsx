@@ -1,8 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { HeroImage } from "../HeroImage";
 import { ImagePreviewModal } from "../ImagePreviewModal";
 import { PageFooter } from "../PageFooter";
@@ -16,10 +15,11 @@ const CompanyInfoTab = dynamic(
   () => import("../tabs/CompanyInfoTab").then((module) => module.CompanyInfoTab),
   {
     loading: () => <div className="app-query-status">{"正在加载公司素材..."}</div>,
+    ssr: false,
   }
 );
 
-interface InspectionResultClientProps {
+export interface InspectionResultClientProps {
   bannerImages: string[];
   traceSampleImages: string[];
   productName: string;

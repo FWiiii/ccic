@@ -1,5 +1,8 @@
 import { InspectionErrorState } from "../src/components/result/InspectionErrorState";
-import { InspectionResultClient } from "../src/components/result/InspectionResultClient";
+import {
+  InspectionResultClient,
+  type InspectionResultClientProps,
+} from "../src/components/result/InspectionResultClient";
 import { buildInspectionDisplayModel } from "../src/lib/inspection-display-model";
 import { PublicInspectionRequestError, fetchPublicInspectionBySn } from "../src/lib/public-inspection";
 import { SearchPage } from "../src/views/SearchPage";
@@ -33,13 +36,23 @@ export default async function Page({ searchParams }: HomePageProps) {
   try {
     const inspectionData = await fetchPublicInspectionBySn(sn, { runtime: "server" });
     const model = buildInspectionDisplayModel(inspectionData, INSPECTION_AGENCY_FALLBACK);
-    return <InspectionResultClient {...model} />;
+    const resultProps: InspectionResultClientProps = {
+      bannerImages: model.bannerImages,
+      traceSampleImages: model.traceSampleImages,
+      productName: model.productName,
+      inspectionAgencyName: model.inspectionAgencyName,
+      consignorName: model.consignorName,
+      verificationDate: model.verificationDate,
+      conclusion: model.conclusion,
+      currentTraceStatus: model.currentTraceStatus,
+    };
+
+    return <InspectionResultClient {...resultProps} />;
   } catch (error) {
     if (error instanceof PublicInspectionRequestError && error.status === 404) {
       return <TraceNotFoundPage traceCode={sn} serviceProvider={INSPECTION_AGENCY_FALLBACK} />;
     }
 
-    const message = error instanceof Error && error.message ? error.message : "查询失败，请稍后重试。";
-    return <InspectionErrorState message={message} />;
+    return <InspectionErrorState message="查询失败，请稍后重试。" />;
   }
 }
