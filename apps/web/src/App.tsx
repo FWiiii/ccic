@@ -26,6 +26,10 @@ export default function App() {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const { querySn, isSearchPage, isFeedbackPage } = useRouteType();
+  const expectedCode =
+    typeof window === "undefined"
+      ? ""
+      : (new URLSearchParams(window.location.search).get("code")?.trim() ?? "");
 
   const { inspectionData, status, errorMessage } = useInspectionQuery({
     querySn,
@@ -54,7 +58,7 @@ export default function App() {
   }, []);
 
   if (isSearchPage) {
-    return <SearchPage />;
+    return <SearchPage expectedCode={expectedCode} />;
   }
 
   if (isFeedbackPage) {
