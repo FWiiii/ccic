@@ -1,3 +1,7 @@
+"use client";
+
+import React from "react";
+
 interface ImagePreviewModalProps {
   src: string | null;
   onClose: () => void;

@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+"use client";
+
+import React, { useMemo, useState } from "react";
 import dotIcon from "../../assets/template/mu/static/picture/dot1.jpg";
 import recordIcon from "../../assets/template/mu/static/picture/1.jpg";
 

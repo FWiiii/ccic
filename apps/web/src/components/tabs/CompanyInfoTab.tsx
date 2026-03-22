@@ -1,4 +1,7 @@
-﻿import companyLogo from "../../assets/template/mu/static/picture/910612857824215040.jpg";
+"use client";
+
+import React from "react";
+import companyLogo from "../../assets/template/mu/static/picture/910612857824215040.jpg";
 import companyImageA from "../../assets/template/mu/static/picture/1666591927040077430.png";
 import companyImageB from "../../assets/template/mu/static/picture/1666591971967015074.jpg";
 import companyImageC from "../../assets/template/mu/static/picture/1590048828117098165.jpg";

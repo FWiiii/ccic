@@ -1,4 +1,6 @@
-import { type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
+"use client";
+
+import React, { type TouchEvent, useEffect, useMemo, useRef, useState } from "react";
 import { normalizeImageUrls } from "../utils/normalizeImageUrls";
 
 interface ProductCarouselProps {

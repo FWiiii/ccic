@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+"use client";
+
+import React, { useState } from "react";
 import logoImage from "../assets/template/mu/static/picture/logo.jpg";
 import falseImage from "../assets/template/mu/static/picture/infobg-false.jpg";
 import okImage from "../assets/template/mu/static/picture/infobg-ture.jpg";
@@ -6,14 +8,16 @@ import warnImage from "../assets/template/mu/static/picture/infobg-warn.jpg";
 
 type SearchResultState = "idle" | "ok" | "fail";
 
-const readCodeFromUrl = () => new URLSearchParams(window.location.search).get("code")?.trim() ?? "";
+interface SearchPageProps {
+  expectedCode?: string;
+}
 
-export function SearchPage() {
-  const expectedCode = useMemo(() => readCodeFromUrl(), []);
+export function SearchPage({ expectedCode = "" }: SearchPageProps) {
+  const normalizedExpectedCode = String(expectedCode).trim();
   const [searchCode, setSearchCode] = useState("");
   const [resultState, setResultState] = useState<SearchResultState>("idle");
 
-  const traceCode = searchCode.trim() || expectedCode || "-";
+  const traceCode = searchCode.trim() || normalizedExpectedCode || "-";
   const isIdle = resultState === "idle";
   const isOk = resultState === "ok";
   const isFail = resultState === "fail";
@@ -26,7 +30,7 @@ export function SearchPage() {
       return;
     }
 
-    if (expectedCode && input !== expectedCode) {
+    if (normalizedExpectedCode && input !== normalizedExpectedCode) {
       setResultState("fail");
       return;
     }

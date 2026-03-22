@@ -1,3 +1,4 @@
+import React from "react";
 import topBanner from "../assets/template/mu/static/picture/1697685869607904.jpg";
 
 export function HeroImage() {

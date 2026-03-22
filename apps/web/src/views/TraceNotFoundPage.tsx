@@ -1,3 +1,4 @@
+import React from "react";
 import qrcodeImage from "../assets/template/mu/static/picture/qrcode-trace.jpg";
 
 interface TraceNotFoundPageProps {
