@@ -16,6 +16,7 @@ import {
 import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
 import type { Request } from "express";
+import { buildInspectionSnCandidates, splitInspectionBatchByExistingSn } from "./inspection-batch";
 import { AdminAuthGuard } from "../auth/admin-auth.guard";
 import { DatabaseService } from "../database/database.service";
 import type {
@@ -1412,6 +1413,109 @@ export class AdminController {
     return result;
   }
 
+  @Post("inspections/batch-create")
+  async createInspectionBatch(@Body() body: Record<string, unknown>) {
+    const productId = String(body?.productId ?? "").trim();
+    const companyId = String(body?.companyId ?? "").trim();
+
+    if (!productId || !companyId) {
+      throw new HttpException(
+        { message: "productId, companyId, startSn and count are required" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const resultValue = body?.result;
+    if (resultValue !== undefined && !isInspectionResult(resultValue)) {
+      throw new HttpException(
+        { message: "result must be PASS/FAIL/PENDING" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const statusValue = body?.status;
+    if (statusValue !== undefined && !isInspectionStatus(statusValue)) {
+      throw new HttpException(
+        { message: "status must be DRAFT/REVIEWED/PUBLISHED/REVOKED" },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const inspectionTimeRaw = body?.inspectionTime;
+    const inspectionTime =
+      inspectionTimeRaw === undefined ? this.databaseService.nowIso() : String(inspectionTimeRaw).trim();
+
+    if (!inspectionTime) {
+      throw new HttpException({ message: "inspectionTime is invalid" }, HttpStatus.BAD_REQUEST);
+    }
+
+    let candidateSnList: string[];
+
+    try {
+      candidateSnList = buildInspectionSnCandidates({
+        startSn: body?.startSn,
+        count: body?.count,
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "invalid batch create input";
+      throw new HttpException({ message: detail }, HttpStatus.BAD_REQUEST);
+    }
+
+    const now = this.databaseService.nowIso();
+    const inspectionResult = isInspectionResult(resultValue) ? resultValue : "PENDING";
+    const inspectionStatus = isInspectionStatus(statusValue) ? statusValue : "DRAFT";
+
+    const result = await this.databaseService.mutateDb((db) => {
+      const product = db.products.find((item) => item.id === productId);
+      if (!product) {
+        return { error: "PRODUCT_NOT_FOUND" as const };
+      }
+
+      const company = db.companies.find((item) => item.id === companyId);
+      if (!company) {
+        return { error: "COMPANY_NOT_FOUND" as const };
+      }
+
+      const existingSnSet = new Set(db.inspections.map((item) => item.sn));
+      const { creatableSnList, skippedSnList } = splitInspectionBatchByExistingSn(candidateSnList, existingSnSet);
+
+      const created: Inspection[] = creatableSnList.map((sn) => ({
+        id: this.databaseService.newId(),
+        sn,
+        productId,
+        companyId,
+        inspectionTime,
+        result: inspectionResult,
+        status: inspectionStatus,
+        conclusion: resolveInspectionConclusion(inspectionResult),
+        createdAt: now,
+        updatedAt: now,
+      }));
+
+      db.inspections = [...created, ...db.inspections];
+
+      return {
+        data: {
+          createdCount: created.length,
+          skippedCount: skippedSnList.length,
+          created,
+          skippedSnList,
+        },
+      };
+    });
+
+    if ("error" in result) {
+      throw new HttpException(
+        {
+          message: result.error === "PRODUCT_NOT_FOUND" ? "productId does not exist" : "companyId does not exist",
+        },
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return result;
+  }
+
   @Put("inspections/:id")
   async updateInspection(@Param("id") id: string, @Body() body: Record<string, unknown>) {
     const result = await this.databaseService.mutateDb((db) => {
@@ -2730,6 +2834,5 @@ export class AdminController {
     }
   }
 }
-
 
 

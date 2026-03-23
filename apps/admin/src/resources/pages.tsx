@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { UploadOutlined } from "@ant-design/icons";
 import { useInvalidate, useList } from "@refinedev/core";
-import { Button, Upload, message } from "antd";
+import { Button, Form, Input, InputNumber, Modal, Select, Upload, message } from "antd";
 import {
   CrudResourcePage,
   type CrudSubmitContext,
@@ -11,6 +11,20 @@ import { requestJson } from "../providers/api-client";
 
 const INSPECTION_AGENCY_NAME =
   "中国检验认证集团奢侈品鉴定中心";
+const MAX_INSPECTION_BATCH_COUNT = 500;
+
+const INSPECTION_RESULT_OPTIONS = [
+  { label: "PASS", value: "PASS" },
+  { label: "FAIL", value: "FAIL" },
+  { label: "PENDING", value: "PENDING" },
+] satisfies FieldOption[];
+
+const INSPECTION_STATUS_OPTIONS = [
+  { label: "DRAFT", value: "DRAFT" },
+  { label: "REVIEWED", value: "REVIEWED" },
+  { label: "PUBLISHED", value: "PUBLISHED" },
+  { label: "REVOKED", value: "REVOKED" },
+] satisfies FieldOption[];
 
 const PRODUCT_IMAGE_SLOT_CONFIG = [
   { key: "productImageAssetId1", scene: "HERO", sortOrder: 0 },
@@ -40,6 +54,14 @@ type UploadSignResponse = {
   headers?: Record<string, string>;
   publicUrl: string;
   expiresIn?: number;
+};
+
+type InspectionBatchCreateResponse = {
+  data?: {
+    createdCount?: number;
+    skippedCount?: number;
+    skippedSnList?: unknown[];
+  };
 };
 
 const readImageDimensions = (file: File) =>
@@ -128,6 +150,10 @@ function useSelectOptions(resource: string, labelField = "name") {
 }
 
 export function InspectionsPage() {
+  const [batchForm] = Form.useForm();
+  const [isBatchModalOpen, setBatchModalOpen] = useState(false);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const invalidate = useInvalidate();
   const productOptions = useSelectOptions("products");
   const companyOptions = useSelectOptions("companies");
 
@@ -140,10 +166,174 @@ export function InspectionsPage() {
     [companyOptions]
   );
 
+  const openBatchModal = () => {
+    batchForm.resetFields();
+    batchForm.setFieldsValue({
+      inspectionTime: new Date().toISOString(),
+      result: "PENDING",
+      status: "DRAFT",
+      count: 1,
+    });
+    setBatchModalOpen(true);
+  };
+
+  const closeBatchModal = () => {
+    setBatchModalOpen(false);
+    setBatchSubmitting(false);
+    batchForm.resetFields();
+  };
+
+  const submitBatchCreate = async (values: Record<string, unknown>) => {
+    setBatchSubmitting(true);
+
+    try {
+      const payload = {
+        productId: String(values.productId ?? "").trim(),
+        companyId: String(values.companyId ?? "").trim(),
+        startSn: String(values.startSn ?? "").trim(),
+        count: Number(values.count ?? 0),
+        inspectionTime: String(values.inspectionTime ?? "").trim(),
+        result: String(values.result ?? "").trim(),
+        status: String(values.status ?? "").trim(),
+      };
+
+      const response = await adminRequest<InspectionBatchCreateResponse>("/api/admin/inspections/batch-create", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      const createdCount = Number(response?.data?.createdCount ?? 0);
+      const skippedCount = Number(response?.data?.skippedCount ?? 0);
+      const skippedSnList = asArray(response?.data?.skippedSnList).map((item) => String(item ?? "").trim()).filter(Boolean);
+
+      message.success(
+        skippedCount > 0 ? `成功生成 ${createdCount} 条，跳过 ${skippedCount} 条` : `成功生成 ${createdCount} 条鉴定单`
+      );
+
+      closeBatchModal();
+      await invalidate({
+        resource: "inspections",
+        invalidates: ["list", "many", "detail"],
+      });
+
+      if (skippedCount > 0) {
+        const visibleSnList = skippedSnList.slice(0, 20);
+        const remainingCount = Math.max(0, skippedCount - visibleSnList.length);
+
+        Modal.info({
+          title: "部分 SN 已存在，已自动跳过",
+          width: 560,
+          content: (
+            <div>
+              <p>本次跳过的 SN 如下：</p>
+              <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>{visibleSnList.join("\n")}</pre>
+              {remainingCount > 0 ? <p style={{ marginTop: 12 }}>等 {remainingCount} 个</p> : null}
+            </div>
+          ),
+        });
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "未知错误";
+      message.error(`批量生成失败：${detail}`);
+    } finally {
+      setBatchSubmitting(false);
+    }
+  };
+
+  const batchAction = (
+    <>
+      <Button onClick={openBatchModal}>批量生成</Button>
+      <Modal
+        open={isBatchModalOpen}
+        title="批量生成鉴定单"
+        onCancel={closeBatchModal}
+        onOk={() => batchForm.submit()}
+        confirmLoading={batchSubmitting}
+        okText="开始生成"
+        cancelText="取消"
+        maskClosable={false}
+        destroyOnHidden
+        width={720}
+      >
+        <Form form={batchForm} layout="vertical" onFinish={(values) => void submitBatchCreate(values)}>
+          <div className="crud-form-grid-inner">
+            <Form.Item className="crud-field-half" name="productId" label="商品" rules={[{ required: true, message: "请选择商品" }]}>
+              <Select options={productOptions} showSearch optionFilterProp="label" />
+            </Form.Item>
+            <Form.Item
+              className="crud-field-half"
+              name="companyId"
+              label="送检公司"
+              rules={[{ required: true, message: "请选择送检公司" }]}
+            >
+              <Select options={companyOptions} showSearch optionFilterProp="label" />
+            </Form.Item>
+            <Form.Item
+              className="crud-field-half"
+              name="startSn"
+              label="起始 SN"
+              rules={[
+                { required: true, message: "请输入起始 SN" },
+                { pattern: /^\d+$/, message: "起始 SN 必须为纯数字" },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              className="crud-field-half"
+              name="count"
+              label="生成数量"
+              rules={[
+                { required: true, message: "请输入生成数量" },
+                {
+                  validator: async (_rule, value) => {
+                    const count = Number(value);
+                    if (Number.isInteger(count) && count >= 1 && count <= MAX_INSPECTION_BATCH_COUNT) {
+                      return;
+                    }
+
+                    throw new Error(`生成数量必须是 1-${MAX_INSPECTION_BATCH_COUNT} 的整数`);
+                  },
+                },
+              ]}
+            >
+              <InputNumber style={{ width: "100%" }} min={1} max={MAX_INSPECTION_BATCH_COUNT} precision={0} />
+            </Form.Item>
+            <Form.Item
+              className="crud-field-half"
+              name="inspectionTime"
+              label="送检时间(ISO)"
+              rules={[{ required: true, message: "请输入送检时间" }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              className="crud-field-half"
+              name="result"
+              label="鉴定结果"
+              rules={[{ required: true, message: "请选择鉴定结果" }]}
+            >
+              <Select options={INSPECTION_RESULT_OPTIONS} optionFilterProp="label" />
+            </Form.Item>
+            <Form.Item
+              className="crud-field-half"
+              name="status"
+              label="发布状态"
+              rules={[{ required: true, message: "请选择发布状态" }]}
+            >
+              <Select options={INSPECTION_STATUS_OPTIONS} optionFilterProp="label" />
+            </Form.Item>
+          </div>
+        </Form>
+      </Modal>
+    </>
+  );
+
   return (
     <CrudResourcePage
       title={`鉴定单管理（鉴定机构固定：${INSPECTION_AGENCY_NAME}）`}
       resource="inspections"
+      headerActions={batchAction}
       fields={[
         { key: "sn", label: "检验码SN", required: true },
         {
@@ -168,23 +358,14 @@ export function InspectionsPage() {
           label: "鉴定结果",
           type: "select",
           required: true,
-          options: [
-            { label: "PASS", value: "PASS" },
-            { label: "FAIL", value: "FAIL" },
-            { label: "PENDING", value: "PENDING" },
-          ],
+          options: INSPECTION_RESULT_OPTIONS,
         },
         {
           key: "status",
           label: "发布状态",
           type: "select",
           required: true,
-          options: [
-            { label: "DRAFT", value: "DRAFT" },
-            { label: "REVIEWED", value: "REVIEWED" },
-            { label: "PUBLISHED", value: "PUBLISHED" },
-            { label: "REVOKED", value: "REVOKED" },
-          ],
+          options: INSPECTION_STATUS_OPTIONS,
         },
         { key: "conclusion", label: "鉴定结论", hideInForm: true },
         { key: "updatedAt", label: "更新时间", hideInForm: true },
