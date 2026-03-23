@@ -459,8 +459,11 @@ body,
 
 .app-carousel-image {
   width: 100%;
-  object-fit: cover;
-  opacity: 0;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center;
+  opacity: 1;
   transition: opacity 0.24s ease;
   position: relative;
   z-index: 2;
