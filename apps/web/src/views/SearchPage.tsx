@@ -1,26 +1,26 @@
 "use client";
 
 import React, { useState } from "react";
+import { resolveSearchValidationResult } from "../lib/search-validation";
 import logoImage from "../assets/template/mu/static/picture/logo.jpg";
 import falseImage from "../assets/template/mu/static/picture/infobg-false.jpg";
 import okImage from "../assets/template/mu/static/picture/infobg-ture.jpg";
 import warnImage from "../assets/template/mu/static/picture/infobg-warn.jpg";
 
-type SearchResultState = "idle" | "ok" | "fail";
+type SearchResultState = "idle" | "fail";
 
 interface SearchPageProps {
   expectedCode?: string;
 }
 
 export function SearchPage({ expectedCode = "" }: SearchPageProps) {
-  const normalizedExpectedCode = String(expectedCode).trim();
+  void expectedCode;
   const [searchCode, setSearchCode] = useState("");
   const [resultState, setResultState] = useState<SearchResultState>("idle");
 
-  const traceCode = searchCode.trim() || normalizedExpectedCode || "-";
   const isIdle = resultState === "idle";
-  const isOk = resultState === "ok";
   const isFail = resultState === "fail";
+  const isOk = false;
 
   const handleSearch = () => {
     const input = searchCode.trim();
@@ -30,12 +30,12 @@ export function SearchPage({ expectedCode = "" }: SearchPageProps) {
       return;
     }
 
-    if (normalizedExpectedCode && input !== normalizedExpectedCode) {
+    const validationResult = resolveSearchValidationResult(input);
+
+    if (validationResult === "invalid") {
       setResultState("fail");
       return;
     }
-
-    setResultState("ok");
   };
 
   return (
@@ -109,7 +109,7 @@ export function SearchPage({ expectedCode = "" }: SearchPageProps) {
             <div className={`auth-info-item ${isOk ? "" : "c-none"}`} style={{ display: isOk ? "block" : "none" }}>
               <p className="auth-info-num c-none" style={{ display: "block" }}>
                 {"溯源号码："}
-                <span className="auth-serinum">{traceCode}</span>
+                <span className="auth-serinum">{searchCode.trim() || "-"}</span>
               </p>
               <p className="auth-product-name c-none" style={{ display: "block" }}>
                 {"产品名称："}
