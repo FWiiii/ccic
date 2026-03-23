@@ -492,7 +492,7 @@ export function CrudResourcePage({
         okText="保存"
         cancelText="取消"
         maskClosable={false}
-        destroyOnClose
+        destroyOnHidden
         width={860}
       >
         <Form form={form} layout="vertical" className="crud-form-grid" onFinish={(values) => void submitForm(values)}>
