@@ -1,5 +1,8 @@
 node_modules
 dist
+.next
+coverage
+apps/web/tsconfig.tsbuildinfo
 .worktrees
 .vscode
 .DS_Store

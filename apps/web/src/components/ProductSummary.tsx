@@ -1,3 +1,5 @@
+import React from "react";
+
 interface ProductSummaryProps {
   productName: string;
   inspectionAgencyName: string;

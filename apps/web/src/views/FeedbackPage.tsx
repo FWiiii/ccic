@@ -1,20 +1,24 @@
-import { FormEvent, useState } from "react";
+"use client";
 
-const goBack = () => {
-  if (window.history.length > 1) {
-    window.history.back();
-    return;
-  }
-
-  window.location.href = "/";
-};
+import React, { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export function FeedbackPage() {
+  const router = useRouter();
   const [contacts, setContacts] = useState("");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [content, setContent] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+
+  const goBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/");
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -141,6 +145,5 @@ export function FeedbackPage() {
     </div>
   );
 }
-
 
 

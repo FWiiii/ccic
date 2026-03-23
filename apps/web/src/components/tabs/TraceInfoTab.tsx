@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+"use client";
+
+import React, { useMemo, useState } from "react";
 import dotIcon from "../../assets/template/mu/static/picture/dot1.jpg";
 import recordIcon from "../../assets/template/mu/static/picture/1.jpg";
 
@@ -107,7 +109,7 @@ export function TraceInfoTab({
                         <div className="van-collapse-item__wrapper" style={{ display: isOpen ? "block" : "none" }}>
                           <div className="van-collapse-item__content">
                             <div className="app-trace-record-header">
-                              <img className="app-trace-record-icon" src={recordIcon} alt="" />
+                              <img className="app-trace-record-icon" src={recordIcon.src} alt="" />
                               <span className="app-trace-record-title">
                                 {section.key === "statement" ? "记录" : recordTitle}
                               </span>
@@ -216,7 +218,7 @@ export function TraceInfoTab({
                   </div>
 
                   <div className="van-step__circle-container">
-                    <img className="app-trace-step-icon" src={dotIcon} alt="" />
+                    <img className="app-trace-step-icon" src={dotIcon.src} alt="" />
                   </div>
                   <div className="van-step__line"></div>
                 </div>

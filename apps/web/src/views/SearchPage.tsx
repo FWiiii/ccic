@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import "../assets/template/mu/static/css/search.css";
-import "../styles/search-authen.css";
+"use client";
+
+import React, { useState } from "react";
 import logoImage from "../assets/template/mu/static/picture/logo.jpg";
 import falseImage from "../assets/template/mu/static/picture/infobg-false.jpg";
 import okImage from "../assets/template/mu/static/picture/infobg-ture.jpg";
@@ -8,14 +8,16 @@ import warnImage from "../assets/template/mu/static/picture/infobg-warn.jpg";
 
 type SearchResultState = "idle" | "ok" | "fail";
 
-const readCodeFromUrl = () => new URLSearchParams(window.location.search).get("code")?.trim() ?? "";
+interface SearchPageProps {
+  expectedCode?: string;
+}
 
-export function SearchPage() {
-  const expectedCode = useMemo(() => readCodeFromUrl(), []);
+export function SearchPage({ expectedCode = "" }: SearchPageProps) {
+  const normalizedExpectedCode = String(expectedCode).trim();
   const [searchCode, setSearchCode] = useState("");
   const [resultState, setResultState] = useState<SearchResultState>("idle");
 
-  const traceCode = searchCode.trim() || expectedCode || "-";
+  const traceCode = searchCode.trim() || normalizedExpectedCode || "-";
   const isIdle = resultState === "idle";
   const isOk = resultState === "ok";
   const isFail = resultState === "fail";
@@ -28,7 +30,7 @@ export function SearchPage() {
       return;
     }
 
-    if (expectedCode && input !== expectedCode) {
+    if (normalizedExpectedCode && input !== normalizedExpectedCode) {
       setResultState("fail");
       return;
     }
@@ -40,7 +42,7 @@ export function SearchPage() {
     <div className="page-group">
       <div className="page page-current" id="search-page">
         <div className="content search-div" style={{ top: "0.8rem", position: "relative", zIndex: 10 }}>
-          <img className="authen-comp-logo" src={logoImage} alt="logo" />
+          <img className="authen-comp-logo" src={logoImage.src} alt="logo" />
           <div className="authen-content-frame">
             <div className="auth-search-item">
               <input
@@ -65,16 +67,21 @@ export function SearchPage() {
               </p>
 
               <div className="auth-result-frame">
-                <img className="c-w100p auth-img-false c-none" src={falseImage} alt="false" style={{ display: "none" }} />
+                <img
+                  className="c-w100p auth-img-false c-none"
+                  src={falseImage.src}
+                  alt="false"
+                  style={{ display: "none" }}
+                />
                 <img
                   className={`c-w100p auth-img-ok ${isOk ? "" : "c-none"}`}
-                  src={okImage}
+                  src={okImage.src}
                   alt="ok"
                   style={{ display: isOk ? "block" : "none" }}
                 />
                 <img
                   className={`c-w100p auth-img-warn ${isFail ? "" : "c-none"}`}
-                  src={warnImage}
+                  src={warnImage.src}
                   alt="warn"
                   style={{ display: isFail ? "block" : "none" }}
                 />
@@ -130,4 +137,3 @@ export function SearchPage() {
     </div>
   );
 }
-

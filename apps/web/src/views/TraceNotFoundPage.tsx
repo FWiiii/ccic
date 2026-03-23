@@ -1,4 +1,4 @@
-import "../styles/trace-notfound.css";
+import React from "react";
 import qrcodeImage from "../assets/template/mu/static/picture/qrcode-trace.jpg";
 
 interface TraceNotFoundPageProps {
@@ -44,7 +44,7 @@ export function TraceNotFoundPage({ traceCode, serviceProvider }: TraceNotFoundP
             </div>
 
             <div className="auth-qrcode-frame" style={{ marginTop: "0.8rem" }}>
-              <img className="auth-qrcode-img" src={qrcodeImage} alt="qrcode" />
+              <img className="auth-qrcode-img" src={qrcodeImage.src} alt="qrcode" />
               <span className="auth-qrcode-des">{"扫码获取更多帮助"}</span>
             </div>
           </div>

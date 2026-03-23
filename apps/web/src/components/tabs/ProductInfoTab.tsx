@@ -1,3 +1,5 @@
+import React from "react";
+
 const paragraphStyle = {
   marginTop: "5px",
   marginRight: 0,

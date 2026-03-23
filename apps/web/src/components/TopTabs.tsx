@@ -1,4 +1,8 @@
-﻿export type TabKey = "taba" | "tabb" | "tabc";
+"use client";
+
+import React from "react";
+
+export type TabKey = "taba" | "tabb" | "tabc";
 
 interface TopTabsProps {
   activeTab: TabKey;
